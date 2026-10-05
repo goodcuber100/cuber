@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Stand Clear! NYC Subway Simulator</title>
+  <meta name="description" content="A cartoon NYC subway simulator on the real MTA map: run the MTA as manager, or drive real routes in first person as the conductor.">
+  <meta name="theme-color" content="#0f1222">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%2300933C'/%3E%3Ctext x='32' y='44' font-family='Helvetica,Arial' font-weight='900' font-size='36' text-anchor='middle' fill='white'%3E6%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ======================= TITLE ======================= -->
+<section id="screen-title" class="screen active">
+  <canvas id="title-canvas"></canvas>
+  <div class="title-vignette"></div>
+  <div class="title-wrap">
+    <div class="logo">
+      <div class="logo-bullets" id="logo-bullets"></div>
+      <h1 class="logo-text" aria-label="Stand Clear!"><span>S</span><span>T</span><span>A</span><span>N</span><span>D</span><span class="sp"> </span><span>C</span><span>L</span><span>E</span><span>A</span><span>R</span><span>!</span></h1>
+      <div class="logo-sign"><span>…of the closing doors, please</span><b>NYC SUBWAY SIMULATOR</b></div>
+    </div>
+    <div class="menu">
+      <button class="menu-btn mb-manager" id="btn-manager"><span class="mb-icon">🗽</span><span class="mb-text"><b>MTA Manager</b><small id="mgr-sub">Start with one train. Grow the whole system.</small></span></button>
+      <button class="menu-btn mb-conductor" id="btn-conductor"><span class="mb-icon">🚇</span><span class="mb-text"><b>Conductor</b><small>Drive real routes in first person. Hit the marker.</small></span></button>
+      <button class="menu-btn mb-ride" id="btn-ride"><span class="mb-icon">👁</span><span class="mb-text"><b>Ride Along</b><small>Kick back and watch NYC from the cab.</small></span></button>
+    </div>
+    <div class="title-foot">
+      <button class="chip" id="tgl-sound">🔊 Sound</button>
+      <button class="chip" id="tgl-voice">🗣 Announcements</button>
+      <button class="chip" id="btn-credits">ℹ️ Credits</button>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= RUN SETUP ======================= -->
+<section id="screen-setup" class="screen">
+  <div class="setup">
+    <header class="setup-head">
+      <button class="btn" id="setup-back">← Back</button>
+      <h2 id="setup-title">Pick your run</h2>
+      <div class="career panel" id="career"></div>
+    </header>
+    <div class="featured" id="featured"></div>
+    <div class="setup-body">
+      <div class="panel line-pick">
+        <div class="panel-title">Choose a line</div>
+        <div class="line-grid" id="line-grid"></div>
+      </div>
+      <div class="panel run-config">
+        <div id="run-title" class="run-title"></div>
+        <label>Direction</label><div class="seg" id="run-dir"></div>
+        <label for="run-from">Start at</label><select id="run-from"></select>
+        <label>Stops</label><div class="seg" id="run-count"></div>
+        <label>Time of day</label><div class="seg" id="run-time"></div>
+        <div class="run-preview" id="run-preview"></div>
+        <div class="run-actions"><button class="btn btn-primary btn-big" id="run-drive">🚇 Start shift</button><button class="btn btn-big" id="run-ride">👁 Ride along</button></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= MTA MANAGER ======================= -->
+<section id="screen-manager" class="screen">
+  <header id="mgr-top">
+    <button id="mgr-menu" class="icon-btn" title="Menu">☰</button>
+    <div class="brand"><span class="brand-logo">MTA</span><span class="brand-name">Manager</span></div>
+    <div class="stat stat-money"><span class="lbl">Funds</span><b id="mgr-money">$0</b><small id="mgr-rate"></small></div>
+    <div class="stat stat-clock"><span class="lbl" id="mgr-day">Day 1</span><b id="mgr-time">6:00 AM</b><small id="mgr-rush"></small></div>
+    <div class="sat">
+      <div class="sat-head"><span>Rider Satisfaction</span><b id="mgr-sat-val">70%</b><i id="mgr-sat-trend"></i></div>
+      <div class="sat-bar"><div id="mgr-sat-fill"></div><div id="mgr-sat-target" title="Where satisfaction is heading"></div></div>
+      <span id="mgr-sat-face" class="sat-face">🙂</span>
+    </div>
+    <div class="speed">
+      <button id="mgr-pause" class="icon-btn" title="Pause / play (Space)">⏸</button>
+      <div class="speed-col"><span class="lbl">Time speed</span><input type="range" id="mgr-speed" min="0" max="6" step="1" aria-label="Time speed"></div>
+      <b id="mgr-speed-label">2×</b>
+    </div>
+    <button class="icon-btn sound-btn" title="Sound">🔊</button>
+  </header>
+  <div id="mgr-body">
+    <div id="mgr-map">
+      <canvas id="mgr-canvas"></canvas>
+      <div id="mgr-info" class="panel hidden"><button id="mgr-info-close" class="x-btn" aria-label="Close">×</button><div class="info-content"></div></div>
+      <button id="mgr-fit" class="map-btn" title="Show whole city">⤢</button>
+      <div class="paused-badge">⏸ PAUSED</div>
+    </div>
+    <aside id="mgr-side" class="panel">
+      <nav class="mgr-tabs">
+        <button class="mgr-tab active" data-tab="lines">🚇 Lines</button><button class="mgr-tab" data-tab="fleet">🚃 Fleet</button><button class="mgr-tab" data-tab="upgrades">⭐ Upgrades</button><button class="mgr-tab" data-tab="stats">📊 Stats</button>
+      </nav>
+      <div id="mgr-panel"></div>
+    </aside>
+    <button id="mgr-side-toggle" class="btn">☰ Panel</button>
+  </div>
+  <footer id="mgr-ticker"><span class="tk-label">NEWS</span><div class="tk-viewport"><div id="mgr-ticker-inner"></div></div></footer>
+</section>
+
+<!-- ======================= FIRST PERSON (Conductor / Ride / Watch) ======================= -->
+<section id="screen-fp" class="screen">
+  <canvas id="fp-canvas"></canvas>
+  <div id="fp-top">
+    <div class="fp-line panel">
+      <div id="fp-bullet"></div>
+      <div class="fp-line-text">
+        <div id="fp-bound" class="fp-bound"></div>
+        <div id="fp-next-label" class="fp-next-label">Next stop</div>
+        <div id="fp-next" class="fp-next"></div>
+        <div id="fp-transfers" class="fp-transfers"></div>
+      </div>
+    </div>
+    <div id="fp-alert" class="fp-alert"></div>
+    <div class="fp-score panel">
+      <div><span>SCORE</span><b id="fp-score">0</b></div>
+      <div><span>SHIFT</span><b id="fp-clock">0:00</b></div>
+      <div><span>SCHEDULE</span><b id="fp-sched">—</b></div>
+      <div><span>RIDERS</span><b id="fp-riders">0</b></div>
+      <div><span>TIME</span><b id="fp-hour">8:00 AM</b></div>
+      <div class="fp-score-btns"><button class="icon-btn sound-btn" title="Sound">🔊</button><button class="icon-btn" id="fp-pause" title="Pause (Esc)">⏸</button></div>
+    </div>
+  </div>
+  <div id="fp-mgrbar" class="panel hidden"><b id="fp-mgr-money"></b><span id="fp-mgr-time"></span><div class="sat-bar mini"><div id="fp-mgr-sat"></div></div><span id="fp-mgr-satv"></span></div>
+  <div id="fp-sidewrap" class="panel hidden"><div class="side-label">CONDUCTOR'S WINDOW · zebra board</div><canvas id="fp-side" width="300" height="150"></canvas><div id="fp-zebra-msg"></div></div>
+  <div id="fp-approach" class="hidden"><div class="ap-label">CAR STOP MARKER <span class="ap-10">10</span></div><div class="gauge"><div class="gz gz-bad"></div><div class="gz gz-ok"></div><div class="gz gz-great"></div><div class="gz gz-perfect"></div><div id="fp-gauge-needle"></div></div><div id="fp-approach-dist"></div></div>
+  <div id="fp-point">👉 <b>Zebra board!</b></div>
+  <div id="fp-dash">
+    <div class="dash-group dash-controller">
+      <div class="dash-label">MASTER CONTROLLER</div>
+      <div class="ctrl-wrap"><div id="fp-notches"></div><div class="ctrl-arrows"><button class="dbtn" id="fp-btn-up" title="Power (W)">▲</button><button class="dbtn" id="fp-btn-down" title="Brake (S)">▼</button></div></div>
+    </div>
+    <div class="dash-group dash-speedo">
+      <div class="dial"><div class="dial-ticks"></div><div id="fp-limit-mark"></div><div id="fp-needle"></div><div class="dial-hub"></div><div class="dial-read"><b id="fp-speed">0</b><span>MPH</span></div></div>
+      <div class="speedo-info"><div id="fp-limit" class="limit-sign">LIMIT 40</div><div id="fp-next-limit" class="next-limit"></div></div>
+    </div>
+    <div class="dash-group dash-lights">
+      <div class="lamp-row"><i id="fp-light-doors" class="lamp green"></i><span>DOORS</span></div>
+      <div class="lamp-row"><i id="fp-light-brake" class="lamp off"></i><span>BRAKE</span></div>
+      <div class="lamp-row"><i id="fp-light-signal" class="lamp green"></i><span>SIGNAL</span></div>
+      <div class="lamp-row"><i id="fp-rev" class="lamp off rev"></i><span>REVERSE</span></div>
+    </div>
+    <div class="dash-group dash-buttons">
+      <button class="dbtn big" id="fp-btn-zebra" title="Point at the zebra board (Z)">👉<small>ZEBRA (Z)</small></button>
+      <button class="dbtn big green" id="fp-btn-open" title="Open doors (O)">🚪<small>OPEN (O)</small></button>
+      <button class="dbtn big" id="fp-btn-pa" title="Announcement (P)">📢<small>PA (P)</small></button>
+      <button class="dbtn big red" id="fp-btn-close" title="Close doors (C)">🔔<small>CLOSE (C)</small></button>
+      <button class="dbtn big" id="fp-btn-horn" title="Horn (H)">📯<small>HORN (H)</small></button>
+      <button class="dbtn big" id="fp-btn-rev" title="Reverse (R)">↩<small>REV (R)</small></button>
+      <button class="dbtn big eb" id="fp-btn-eb" title="Emergency brake (Space)">🛑<small>E-BRAKE</small></button>
+    </div>
+    <div class="dash-group dash-meters">
+      <div class="meter"><span>🛡 Safety</span><i><b id="fp-m-safety"></b></i></div>
+      <div class="meter"><span>☕ Comfort</span><i><b id="fp-m-comfort"></b></i></div>
+      <div class="meter"><span>😀 Service</span><i><b id="fp-m-service"></b></i></div>
+    </div>
+  </div>
+  <div id="fp-watch" class="hidden">
+    <div id="fp-watch-title" class="panel"></div>
+    <button class="btn" id="fp-watch-speed">⏩ 1×</button>
+    <button class="btn btn-primary" id="fp-watch-exit">✕ Exit</button>
+  </div>
+</section>
+
+<div id="float-root"></div>
+<div id="modal-root"></div>
+<div id="toast-root"></div>
+
+<script src="js/data/nyc-data.js"></script>
+<script src="js/core/util.js"></script>
+<script src="js/core/audio.js"></script>
+<script src="js/core/ui.js"></script>
+<script src="js/core/net.js"></script>
+<script src="js/core/icons.js"></script>
+<script src="js/manager/content.js"></script>
+<script src="js/manager/sim.js"></script>
+<script src="js/manager/map.js"></script>
+<script src="js/manager/mode.js"></script>
+<script src="js/fp/track.js"></script>
+<script src="js/fp/sprites.js"></script>
+<script src="js/fp/renderer.js"></script>
+<script src="js/fp/stopEvents.js"></script>
+<script src="js/fp/conductor.js"></script>
+<script src="js/fp/mode.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
