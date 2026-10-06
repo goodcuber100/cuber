@@ -6,7 +6,15 @@
   <title>Stand Clear! NYC Subway Simulator</title>
   <meta name="description" content="A cartoon NYC subway simulator on the real MTA map: run the MTA as manager, or drive real routes in first person as the conductor.">
   <meta name="theme-color" content="#0f1222">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%2300933C'/%3E%3Ctext x='32' y='44' font-family='Helvetica,Arial' font-weight='900' font-size='36' text-anchor='middle' fill='white'%3E6%3C/text%3E%3C/svg%3E">
+  <meta name="application-name" content="Stand Clear!">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Stand Clear!">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -30,7 +38,9 @@
       <button class="chip" id="tgl-sound">🔊 Sound</button>
       <button class="chip" id="tgl-voice">🗣 Announcements</button>
       <button class="chip" id="btn-credits">ℹ️ Credits</button>
+      <button class="chip" id="btn-install" hidden>📲 Install app</button>
     </div>
+    <p id="ios-install-hint" class="install-hint" hidden><span>Install: tap Share ⬆︎ then Add to Home Screen</span><button type="button" class="install-hint-x" aria-label="Dismiss">✕</button></p>
     <p class="fan-note">A fan-made game built on open MTA data. Not affiliated with or endorsed by the MTA.</p>
   </div>
 </section>
@@ -179,6 +189,7 @@
 <script src="js/core/util.js"></script>
 <script src="js/core/audio.js"></script>
 <script src="js/core/ui.js"></script>
+<script src="js/core/pwa.js"></script>
 <script src="js/core/net.js"></script>
 <script src="js/core/icons.js"></script>
 <script src="js/manager/content.js"></script>

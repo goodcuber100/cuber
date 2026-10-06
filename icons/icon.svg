@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Stand Clear! app icon: a cartoon subway car front on a yellow token. Rendered to PNGs by tools/make-icons.mjs -->
+  <style>@media (max-width: 64px) { .fine { display: none } }</style>
+  <defs>
+    <radialGradient id="sky" cx="256" cy="200" r="380" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2a3266"/>
+      <stop offset="1" stop-color="#0f1222"/>
+    </radialGradient>
+  </defs>
+  <rect class="tile" width="512" height="512" rx="112" fill="url(#sky)"/>
+  <g class="art" stroke="#1d1d24" stroke-linejoin="round" stroke-linecap="round">
+    <!-- token -->
+    <circle cx="270" cy="264" r="196" fill="#1d1d24" stroke="none"/>
+    <circle cx="256" cy="250" r="196" fill="#ffd23f" stroke-width="16"/>
+    <circle class="fine" cx="256" cy="250" r="168" fill="none" stroke="#f0bf1a" stroke-width="7"/>
+    <!-- car body, with an offset ink shadow like the game's buttons -->
+    <path d="M150 418V192q0-60 60-60h120q60 0 60 60v226z" fill="#1d1d24" stroke="none"/>
+    <path d="M136 404V178q0-60 60-60h120q60 0 60 60v226z" fill="#eef1f6" stroke="none"/>
+    <rect x="142" y="310" width="228" height="90" fill="#cdd3de" stroke="none"/>
+    <path class="fine" d="M156 290V186q0-42 40-48" fill="none" stroke="#fff" stroke-width="9"/>
+    <path d="M136 404V178q0-60 60-60h120q60 0 60 60v226z" fill="none" stroke-width="15"/>
+    <!-- route sign -->
+    <rect x="182" y="134" width="148" height="34" rx="8" fill="#1d1d24" stroke="none"/>
+    <circle cx="256" cy="151" r="12.5" fill="#b933ad" stroke="none"/>
+    <path class="fine" d="M250.5 145h11l-7.5 13.5" fill="none" stroke="#fff" stroke-width="3.6"/>
+    <!-- dark front mask + windows -->
+    <rect x="154" y="182" width="204" height="114" rx="20" fill="#262b40" stroke="none"/>
+    <rect x="166" y="192" width="84" height="94" rx="12" fill="#8fd8ff" stroke="none"/>
+    <rect x="262" y="192" width="84" height="94" rx="12" fill="#8fd8ff" stroke="none"/>
+    <path class="fine" d="M178 278l32-78h17l-32 78zM274 278l32-78h17l-32 78z" fill="#fff" fill-opacity=".8" stroke="none"/>
+    <!-- headlights -->
+    <circle cx="190" cy="346" r="22" fill="#fff3a6" stroke-width="11"/>
+    <circle cx="322" cy="346" r="22" fill="#fff3a6" stroke-width="11"/>
+    <!-- bumper -->
+    <rect x="122" y="396" width="268" height="32" rx="10" fill="#4a5068" stroke-width="13"/>
+  </g>
+</svg>

@@ -38,9 +38,10 @@ window.SC = window.SC || {};
 
     // kind: 'conductor' | 'ride' | 'watch'
     start(kind, opts) {
-      this.stop();
+      this.stop(true);
       this.kind = kind; this.opts = opts;
       UI.show('screen-fp');
+      if (SC.pwa) SC.pwa.lockLandscape();
       const scr = $('#screen-fp'); scr.classList.toggle('auto', kind !== 'conductor'); scr.classList.toggle('watching', kind === 'watch');
       $('#fp-watch').classList.toggle('hidden', kind === 'conductor');
       $('#fp-watch-title').innerHTML = kind === 'watch' ? `👁 LIVE · Train #${opts.trainId} ${UI.bullet(net.routeById[opts.routeId], 'sm')}` : `👁 Ride Along ${UI.bullet(net.routeById[opts.routeId], 'sm')}`;
@@ -62,7 +63,11 @@ window.SC = window.SC || {};
         AU.speak(`This is ${st.name}. This is a ${st.bound.replace(/&/g, 'and')} ${this.game.route.shortName}.`);
       });
     },
-    stop() { if (this.game) { this.game.over = true; this.game = null; } AU.stopLoops(); if (window.speechSynthesis) try { speechSynthesis.cancel(); } catch (e) { /* ignore */ } },
+    // keepOrientation: restarting a run stays on this screen, so keep the landscape lock
+    stop(keepOrientation) {
+      if (this.game) { this.game.over = true; this.game = null; } AU.stopLoops(); if (window.speechSynthesis) try { speechSynthesis.cancel(); } catch (e) { /* ignore */ }
+      if (!keepOrientation && SC.pwa) SC.pwa.unlockOrientation();
+    },
     exit() { const k = this.kind; this.stop(); AU.click(); if (k === 'watch') SC.app.backToManager(); else SC.app.showConductorSetup(); },
 
     tutorial() {

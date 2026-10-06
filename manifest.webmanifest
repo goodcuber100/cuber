@@ -1,0 +1,22 @@
+{
+  "id": "./",
+  "name": "Stand Clear! NYC Subway Simulator",
+  "short_name": "Stand Clear!",
+  "description": "A cartoon NYC subway simulator on the real MTA map: run the MTA as manager, or drive real routes in first person as the conductor.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "any",
+  "background_color": "#0f1222",
+  "theme_color": "#0f1222",
+  "categories": ["games"],
+  "lang": "en",
+  "dir": "ltr",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

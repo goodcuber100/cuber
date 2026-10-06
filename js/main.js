@@ -42,6 +42,7 @@ window.SC = window.SC || {};
       this.titleRenderer = new SC.FPRenderer($('#title-canvas'));
       window.addEventListener('resize', () => { if (UI.current === 'screen-title') this.titleRenderer.resize(); });
       this.syncToggles();
+      if (SC.pwa) SC.pwa.init();
       this.showTitle();
       let last = performance.now();
       const frame = (now) => {

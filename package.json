@@ -7,7 +7,8 @@
     "start": "npx --yes http-server -c-1 -p 8080 -o .",
     "data:fetch": "bash tools/fetch-data.sh .data-src",
     "data:build": "node tools/build-data.mjs --gtfs .data-src/gtfs/gtfs_json/subway --stations .data-src/mss/stations.json --land .data-src/lands10m.geo.json --nybb .data-src/nybb",
-    "balance": "node tools/sim-test.mjs 6"
+    "balance": "node tools/sim-test.mjs 6",
+    "icons": "node tools/make-icons.mjs"
   },
   "license": "MIT"
 }

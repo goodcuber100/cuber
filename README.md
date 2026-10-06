@@ -30,6 +30,18 @@ npm start          # http-server on http://localhost:8080
 
 To host it, put the repository root on any static host. On GitHub Pages: *Settings → Pages → Deploy from branch → / (root)*.
 
+## 📱 Play on your phone
+
+Stand Clear! installs like an app: it gets its own home-screen icon, launches full screen and keeps working offline.
+
+1. **Host the folder on any HTTPS static host.** On GitHub Pages: *Settings → Pages → Deploy from a branch →* this branch, */ (root)*. The game shows up at `https://<you>.github.io/<repo>/`.
+2. **Open that URL on your phone**, then add it to your home screen:
+   - **Android (Chrome):** menu **⋮ → Install app** (or *Add to Home screen*). When Chrome offers it, the title screen also shows a **📲 Install app** button.
+   - **iPhone / iPad (Safari):** **Share ⬆︎ → Add to Home Screen**.
+3. **Tap the new icon.** It launches full screen, and after the first load it works offline (on the subway!). On Android, first-person runs also lock to landscape.
+
+A double-clicked `index.html` (`file://`) and the private claude.ai preview still play fine, but they can't be installed: the offline service worker needs an HTTPS page of its own. When you publish an update, bump `VERSION` in `sw.js` so installed copies fetch it; they say *"Updated to the latest version"* on the next launch.
+
 ## 🗽 MTA Manager
 
 - **Start:** you get a **$150,000** injection from Albany. Your first line opening is free, so pick a line (all **26 real routes**, 1 2 3 4 5 6 7 A C E B D F M G J Z L N Q R W, the three S shuttles and the SIR) and buy your first train.
@@ -84,16 +96,19 @@ npm run data:build   # regenerates js/data/nyc-data.js
 
 ```
 index.html            all screens (title, run setup, manager, first-person)
+manifest.webmanifest  home-screen app manifest (name, colors, icons)
+sw.js                 service worker: precaches the game so it plays offline
+icons/                app icon (icon.svg is the master; npm run icons renders the PNGs)
 css/style.css         the cartoon UI theme
 js/data/nyc-data.js   generated NYC network + shorelines
-js/core/              util, procedural audio + speech, UI helpers, network model, landmark icons
+js/core/              util, procedural audio + speech, UI helpers, install/offline support, network model, landmark icons
 js/manager/           content (cars, upgrades, events), simulation, map renderer, screen controller
 js/fp/                track builder, sprites, pseudo-3D renderer, stop events, conductor game, screen controller
 js/main.js            title screen (live autopilot ride behind the menu), run picker, main loop
-tools/                data pipeline + headless economy balance test
+tools/                data pipeline, headless economy balance test, icon renderer
 ```
 
-The art is drawn live on `<canvas>` and the sound is synthesized live with WebAudio, including the two-tone door chime, the stepping "do-re-mi" motor whine, wheel clacks, the horn and brake squeal. Announcements use the browser's speech synthesis. There are no image or audio files.
+The art is drawn live on `<canvas>` and the sound is synthesized live with WebAudio, including the two-tone door chime, the stepping "do-re-mi" motor whine, wheel clacks, the horn and brake squeal. Announcements use the browser's speech synthesis. Apart from the app icon, there are no image or audio files.
 
 `npm run balance` runs the real Manager simulation headless with a simple AI policy and prints the economy day by day, which is handy for tuning `js/manager/content.js` and `js/manager/sim.js`.
 
