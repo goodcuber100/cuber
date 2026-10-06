@@ -34,9 +34,10 @@ window.SC = window.SC || {};
   U.money = (n, exact) => {
     const s = n < 0 ? '-' : ''; n = Math.abs(n);
     if (exact || n < 10000) return s + '$' + n.toLocaleString('en-US', { maximumFractionDigits: n < 100 ? 2 : 0, minimumFractionDigits: n < 100 && n % 1 ? 2 : 0 });
-    if (n < 1e6) return s + '$' + (n / 1000).toFixed(n < 1e5 ? 1 : 0) + 'k';
-    if (n < 1e9) return s + '$' + (n / 1e6).toFixed(2) + 'M';
-    return s + '$' + (n / 1e9).toFixed(2) + 'B';
+    const trim = (v) => v.replace(/\.0+$/, '').replace(/(\.\d*[1-9])0+$/, '$1');
+    if (n < 1e6) return s + '$' + trim((n / 1000).toFixed(n < 1e5 ? 1 : 0)) + 'k';
+    if (n < 1e9) return s + '$' + trim((n / 1e6).toFixed(2)) + 'M';
+    return s + '$' + trim((n / 1e9).toFixed(2)) + 'B';
   };
   U.num = (n) => { n = Math.round(n); if (n < 10000) return n.toLocaleString('en-US'); if (n < 1e6) return (n / 1000).toFixed(1) + 'k'; return (n / 1e6).toFixed(2) + 'M'; };
   U.clock = (secOfDay) => { const m = Math.floor(secOfDay / 60) % 1440; let h = Math.floor(m / 60); const mm = m % 60; const ap = h < 12 ? 'AM' : 'PM'; h = h % 12 || 12; return `${h}:${String(mm).padStart(2, '0')} ${ap}`; };

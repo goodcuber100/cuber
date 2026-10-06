@@ -70,14 +70,16 @@
     <div class="stat stat-money"><span class="lbl">Funds</span><b id="mgr-money">$0</b><small id="mgr-rate"></small></div>
     <div class="stat stat-clock"><span class="lbl" id="mgr-day">Day 1</span><b id="mgr-time">6:00 AM</b><small id="mgr-rush"></small></div>
     <div class="sat">
-      <div class="sat-head"><span>Rider Satisfaction</span><b id="mgr-sat-val">70%</b><i id="mgr-sat-trend"></i></div>
+      <div class="sat-head"><span id="mgr-sat-face" class="sat-face">🙂</span><span class="lbl">Rider satisfaction</span><b id="mgr-sat-val">70%</b><i id="mgr-sat-trend"></i></div>
       <div class="sat-bar"><div id="mgr-sat-fill"></div><div id="mgr-sat-target" title="Where satisfaction is heading"></div></div>
-      <span id="mgr-sat-face" class="sat-face">🙂</span>
     </div>
     <div class="speed">
       <button id="mgr-pause" class="icon-btn" title="Pause / play (Space)">⏸</button>
-      <div class="speed-col"><span class="lbl">Time speed</span><input type="range" id="mgr-speed" min="0" max="6" step="1" aria-label="Time speed"></div>
-      <b id="mgr-speed-label">2×</b>
+      <div class="speed-col">
+        <label class="lbl" for="mgr-speed">Time speed · <b id="mgr-speed-label">2×</b></label>
+        <input type="range" id="mgr-speed" min="0" max="6" step="1">
+        <div class="speed-ticks" aria-hidden="true"><span>⏸</span><span>½</span><span>1</span><span>2</span><span>4</span><span>8</span><span>16</span></div>
+      </div>
     </div>
     <button class="icon-btn sound-btn" title="Sound">🔊</button>
   </header>
@@ -85,12 +87,18 @@
     <div id="mgr-map">
       <canvas id="mgr-canvas"></canvas>
       <div id="mgr-info" class="panel hidden"><button id="mgr-info-close" class="x-btn" aria-label="Close">×</button><div class="info-content"></div></div>
-      <button id="mgr-fit" class="map-btn" title="Show whole city">⤢</button>
+      <div class="map-ctrls" role="group" aria-label="Map zoom">
+        <button id="mgr-zoom-in" class="map-btn" title="Zoom in" aria-label="Zoom in">+</button>
+        <button id="mgr-zoom-out" class="map-btn" title="Zoom out" aria-label="Zoom out">−</button>
+        <button id="mgr-home" class="map-btn" title="Back to your lines" aria-label="Back to your lines">⌂</button>
+        <button id="mgr-fit" class="map-btn" title="Whole city" aria-label="Show the whole city">⤢</button>
+      </div>
+      <div class="map-legend" aria-label="Platform crowding legend"><span class="lg-title">Platforms</span><span><i class="ring calm"></i>calm</span><span><i class="ring busy"></i>busy</span><span><i class="ring packed"></i>packed</span></div>
       <div class="paused-badge">⏸ PAUSED</div>
     </div>
     <aside id="mgr-side" class="panel">
       <nav class="mgr-tabs">
-        <button class="mgr-tab active" data-tab="lines">🚇 Lines</button><button class="mgr-tab" data-tab="fleet">🚃 Fleet</button><button class="mgr-tab" data-tab="upgrades">⭐ Upgrades</button><button class="mgr-tab" data-tab="stats">📊 Stats</button>
+        <button class="mgr-tab active" data-tab="lines">Lines</button><button class="mgr-tab" data-tab="fleet">Fleet</button><button class="mgr-tab" data-tab="upgrades">Upgrades</button><button class="mgr-tab" data-tab="stats">Stats</button>
       </nav>
       <div id="mgr-panel"></div>
     </aside>

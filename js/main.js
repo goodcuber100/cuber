@@ -91,7 +91,7 @@ window.SC = window.SC || {};
       let sim; try { sim = new SC.ManagerSim(saved); } catch (e) { console.warn('bad save, starting fresh', e); sim = new SC.ManagerSim(); }
       UI.show('screen-manager');
       this.mgr = new SC.ManagerMode(sim);
-      requestAnimationFrame(() => { this.mgr.map.resize(); this.mgr.map.fitAll(true); this.mgr.renderTab(true); });
+      requestAnimationFrame(() => { this.mgr.map.resize(); this.mgr.map.fitHome(true); this.mgr.renderTab(true); });
       if (!saved) setTimeout(() => this.mgr.help(true), 250);
       else UI.toast(`Welcome back! Day ${sim.state.day}, ${U.money(sim.state.money)} in the bank.`, 'good');
     },

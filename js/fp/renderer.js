@@ -429,7 +429,6 @@ window.SC = window.SC || {};
       // glare
       ctx.globalAlpha = 0.06; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(W * 0.62, top); ctx.lineTo(W * 0.7, top); ctx.lineTo(W * 0.45, dashTop); ctx.lineTo(W * 0.37, dashTop); ctx.fill(); ctx.globalAlpha = 1;
       // route sign in the corner of the window
-      if (g.route) { SP.bulletAt(ctx, g.route, side + 34, top + 32, 20); ctx.lineWidth = 2; ctx.strokeStyle = '#11141a'; ctx.beginPath(); ctx.arc(side + 34, top + 32, 20, 0, 7); ctx.stroke(); }
       // dash ledge
       ctx.fillStyle = '#20242c'; ctx.beginPath(); ctx.moveTo(0, dashTop + 18); ctx.lineTo(W * 0.04, dashTop); ctx.lineTo(W * 0.96, dashTop); ctx.lineTo(W, dashTop + 18); ctx.closePath(); ctx.fill();
       ctx.fillStyle = '#383e4b'; ctx.fillRect(W * 0.04, dashTop, W * 0.92, 3);

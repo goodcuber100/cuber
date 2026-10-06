@@ -25,8 +25,11 @@ window.SC = window.SC || {};
   // ---------- toasts ----------
   UI.toast = (html, type = 'info', ms = 3200) => {
     const root = $('#toast-root'); if (!root) return;
-    const t = UI.el('div', `toast toast-${type}`, html); root.appendChild(t);
-    while (root.children.length > 4) root.firstChild.remove();
+    // skip an exact repeat of a toast that is still showing
+    for (const c of root.children) if (c.dataset.html === html && !c.classList.contains('out')) return;
+    const t = UI.el('div', `toast toast-${type}`, html); t.dataset.html = html; root.appendChild(t);
+    while (root.children.length > 3) root.firstChild.remove();
+    ms = Math.min(ms, 4500);
     setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 400); }, ms);
   };
 
