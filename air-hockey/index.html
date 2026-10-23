@@ -373,7 +373,7 @@ const PR = 0.042, MR = 0.068, PU_R = 0.05;
 const GOAL_W = 0.36, GX0 = (W - GOAL_W) / 2, GX1 = (W + GOAL_W) / 2;
 const RAIL = 0.075, END_ROOM = 56;
 const DT = 1 / 240;
-const MAX_PULL = 0.3, GUARD_OFF = 0.14;
+const MAX_PULL = 0.3, START_OFF = 0.14;
 
 const CLASSIC = { damp: 0.28, wallE: 0.85, hitE: 0.75, maxPuck: 2.8, humanSpeed: 11 };
 const SLING = {
@@ -842,29 +842,37 @@ function steer(i, c) {
 }
 
 // ---------- Play by Play ----------
+// A spot in player i's half that is clear of the puck and of the other mallet.
 function placeClamp(i, x, y, r) {
-  const p = game.puck, need = PR + r + 0.004;
-  for (let pass = 0; pass < 2; pass++) {
+  const p = game.puck, o = game.m[1 - i];
+  for (let pass = 0; pass < 3; pass++) {
     [x, y] = clampHalf(i, x, y, r);
-    const dx = x - p.x, dy = y - p.y, d = Math.hypot(dx, dy);
-    if (p.live && d < need) {
-      if (d < 1e-6) { y += i === 0 ? need : -need; } else { x = p.x + dx / d * need; y = p.y + dy / d * need; }
+    for (const b of [p, o]) {
+      if (b === p && !p.live) continue;
+      const need = b.r + r + 0.004, dx = x - b.x, dy = y - b.y, d = Math.hypot(dx, dy);
+      if (d >= need) continue;
+      if (d < 1e-6) y += i === 0 ? need : -need; else { x = b.x + dx / d * need; y = b.y + dy / d * need; }
     }
   }
   return [x, y];
 }
-function guardSpot(i) {
-  const r = game.m[i].r, p = game.puck;
-  let x = W / 2, y = i === 0 ? L - GUARD_OFF : GUARD_OFF;
-  const need = PR + r + 0.012;
-  if (p.live && Math.hypot(p.x - x, p.y - y) < need) {
-    const dy = p.y - y, off = Math.sqrt(Math.max(0, need * need - dy * dy)) + 0.002;
-    const left = p.x - off, right = p.x + off, okL = left >= r, okR = right <= W - r;
-    if (okL && (!okR || Math.abs(left - W / 2) < Math.abs(right - W / 2))) x = left;
-    else if (okR) x = right;
-    else y += (i === 0 ? -1 : 1) * need;
+// Mallets stay where their shots leave them. One only slides aside when a ghost shot left it
+// sitting on the puck or the other mallet; when the two mallets overlap, mallet `first` moves.
+function settleMallets(first) {
+  const p = game.puck;
+  for (const k of first === 1 ? [1, 0] : [0, 1]) {
+    const m = game.m[k], o = game.m[1 - k];
+    let x = m.x, y = m.y;
+    for (const b of [p, o]) {
+      if (b === p && !p.live) continue;
+      const bx = b.glide ? b.glide.x : b.x, by = b.glide ? b.glide.y : b.y;
+      const need = b.r + m.r + 0.006, dx = x - bx, dy = y - by, d = Math.hypot(dx, dy);
+      if (d >= need) continue;
+      const nx = d > 1e-6 ? dx / d : 0, ny = d > 1e-6 ? dy / d : (k === 0 ? 1 : -1);
+      x = clamp(bx + nx * need, m.r, W - m.r); y = clamp(by + ny * need, m.r, L - m.r);
+    }
+    if (x !== m.x || y !== m.y) m.glide = { x, y };
   }
-  return { x, y };
 }
 function pickPowerup() {
   let total = 0;
@@ -923,7 +931,7 @@ function endShot() {
   shotOver(i);
   let next = 1 - i;
   if (pl.extra) { pl.extra = false; next = i; toast(`<b>${pname(i)}</b> shoots again`, PC[i]); }
-  for (let k = 0; k < 2; k++) game.m[k].glide = guardSpot(k);
+  settleMallets(i);
   game.sl.next = next; game.sl.t = 0;
   game.phase = 'return';
 }
@@ -943,7 +951,7 @@ function collect(u) {
 
 // CPU shot planning: try many placements and launches in a copy of the table, keep the best.
 function genCandidates(i) {
-  const p = game.puck, r = game.m[i].r, oppY = i === 0 ? 0 : L;
+  const p = game.puck, r = game.m[i].r, oppY = i === 0 ? 0 : L, mx = game.m[i].x, my = game.m[i].y;
   const targets = [];
   for (const gx of [W / 2, W / 2 - GOAL_W * 0.3, W / 2 + GOAL_W * 0.3]) targets.push([gx, oppY], [-gx, oppY], [2 * W - gx, oppY]);
   for (const u of game.pus) targets.push([u.x, u.y]);
@@ -955,6 +963,8 @@ function genCandidates(i) {
     if (d < 1e-6) continue;
     dx /= d; dy /= d;
     const cx = p.x - dx * (PR + r), cy = p.y - dy * (PR + r);
+    const fx = cx - mx, fy = cy - my, fd = Math.hypot(fx, fy);
+    if (fd > 0.02) for (const pow of [0.45, 0.7, 1]) out.push({ x: mx, y: my, dx: fx / fd, dy: fy / fd, pow });
     for (const back of [0.05, 0.16, 0.3]) {
       const [sx, sy] = placeClamp(i, cx - dx * back, cy - dy * back, r);
       let lx = cx - sx, ly = cy - sy;
@@ -978,9 +988,7 @@ function simulateShot(i, c) {
     pus: game.pus.map(u => ({ x: u.x, y: u.y, type: u.type })),
     shields: game.shields.slice(), active: i, ghost: pl.ghost,
   };
-  const a = w.m[i], o = w.m[1 - i];
-  const g = guardSpot(1 - i);
-  o.x = g.x; o.y = g.y;
+  const a = w.m[i];
   a.x = c.x; a.y = c.y;
   const sp = c.pow * SLING.maxLaunch * (pl.turbo ? SLING.turbo : 1);
   a.vx = c.dx * sp; a.vy = c.dy * sp;
@@ -996,11 +1004,13 @@ function simulateShot(i, c) {
     const q = w.puck;
     if (Math.abs(q.vx) + Math.abs(q.vy) < 0.01 && Math.abs(a.vx) + Math.abs(a.vy) < 0.01) break;
   }
-  let s = res.value;
+  const ownY = i === 0 ? L : 0, oppY = L - ownY;
+  // the mallet stays where it stops and has to defend from there
+  let s = res.value - 18 * Math.min(1, Math.hypot(a.x - W / 2, a.y - ownY) / 1.2);
   if (res.goal === i) s += 100 * (pl.double ? 2 : 1);
   else if (res.goal === 1 - i) s -= 250;
   else {
-    const ownY = i === 0 ? L : 0, oppY = L - ownY, q = w.puck;
+    const q = w.puck;
     s -= 45 * Math.max(0, 1 - Math.hypot(q.x - W / 2, q.y - ownY) / 0.9);
     s += 12 * Math.max(0, 1 - Math.hypot(q.x - W / 2, q.y - oppY) / L);
   }
@@ -1072,7 +1082,7 @@ function updateSling(dt) {
       break;
     }
     case 'return':
-      if ((!game.m[0].glide && !game.m[1].glide) || sl.t > 0.9) {
+      if ((!game.m[0].glide && !game.m[1].glide && sl.t > 0.3) || sl.t > 0.9) {
         for (const mm of game.m) if (mm.glide) { mm.x = mm.glide.x; mm.y = mm.glide.y; mm.glide = null; }
         beginTurn(sl.next);
       }
@@ -1165,7 +1175,8 @@ function afterGoal() {
     if (d < need) [m.x, m.y] = clampHalf(c, m.x, p.y + (c === 0 ? need : -need), m.r);
     game.phase = 'live';
   } else {
-    for (let k = 0; k < 2; k++) game.m[k].glide = guardSpot(k);
+    settleMallets(game.sl.shooter);
+    for (const m of game.m) if (m.glide) { m.x = m.glide.x; m.y = m.glide.y; m.glide = null; }
     beginTurn(c);
   }
 }
@@ -1182,7 +1193,7 @@ function startGame(mode, attract = false) {
   game.hint = { done: attract };
   for (let i = 0; i < 2; i++) {
     const m = game.m[i];
-    m.r = MR; m.x = W / 2; m.y = mode === 'sling' ? (i === 0 ? L - GUARD_OFF : GUARD_OFF) : (i === 0 ? L - 0.2 : 0.2);
+    m.r = MR; m.x = W / 2; m.y = mode === 'sling' ? (i === 0 ? L - START_OFF : START_OFF) : (i === 0 ? L - 0.2 : 0.2);
     m.vx = m.vy = 0; m.tx = m.x; m.ty = m.y; m.glide = null; m.place = null; m.maxV = CLASSIC.humanSpeed;
   }
   const p = game.puck;
