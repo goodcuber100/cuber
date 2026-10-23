@@ -19,6 +19,8 @@ The table turns to fit the screen: horizontal on a wide screen, vertical on a ph
 | Extra shot | You shoot again after this turn |
 | Ghost | Your next shot passes straight through the other mallet |
 
+In both modes, after a goal both mallets go back to their starting spots and the puck restarts in the half of the player who was scored on.
+
 ## Options
 
 - **Opponent:** Easy, Medium or Hard CPU, or 2 players on one device.

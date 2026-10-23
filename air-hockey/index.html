@@ -836,6 +836,7 @@ function keyboardSteer(i, dt) {
   [m.tx, m.ty] = clampHalf(i, m.x + dx * k.v * dt * 1.5, m.y + dy * k.v * dt * 1.5, m.r);
 }
 function steer(i, c) {
+  if (game.phase === 'goal') return;   // mallets are on their way back to their starting spots
   const m = game.m[i];
   [m.tx, m.ty] = clampHalf(i, c.x, c.y, m.r);
   game.kb[i].v = 0;
@@ -873,6 +874,11 @@ function settleMallets(first) {
     }
     if (x !== m.x || y !== m.y) m.glide = { x, y };
   }
+}
+// Where each mallet starts a game and goes back to after every goal.
+function startSpot(i) {
+  const off = game.mode === 'sling' ? START_OFF : 0.2;
+  return { x: W / 2, y: i === 0 ? L - off : off };
 }
 function pickPowerup() {
   let total = 0;
@@ -1159,6 +1165,11 @@ function onGoal(scorer) {
   sfx.goal(); buzz(40);
   banner(pts === 2 ? 'DOUBLE!' : 'GOAL!', PC[scorer]);
   game.nextConceder = conceder;
+  for (let k = 0; k < 2; k++) {
+    const m = game.m[k], home = startSpot(k);
+    if (game.mode === 'sling') { m.glide = home; m.place = null; }
+    else { m.tx = home.x; m.ty = home.y; m.maxV = 2.5; }
+  }
   game.phase = 'goal'; game.timer = game.attract ? 0.9 : 1.6;
 }
 function afterGoal() {
@@ -1171,13 +1182,12 @@ function afterGoal() {
   p.x = W / 2; p.y = c === 0 ? HALF + 0.3 : HALF - 0.3; p.vx = p.vy = 0;
   p.live = true; p.spawnT = 0.35;
   if (game.mode === 'classic') {
-    const m = game.m[c], dx = m.x - p.x, dy = m.y - p.y, d = Math.hypot(dx, dy), need = m.r + PR + 0.02;
-    if (d < need) [m.x, m.y] = clampHalf(c, m.x, p.y + (c === 0 ? need : -need), m.r);
+    for (const m of game.m) m.maxV = CLASSIC.humanSpeed;
     game.phase = 'live';
   } else {
-    settleMallets(game.sl.shooter);
-    for (const m of game.m) if (m.glide) { m.x = m.glide.x; m.y = m.glide.y; m.glide = null; }
-    beginTurn(c);
+    // the next turn starts once both mallets are back on their spots
+    game.sl.next = c; game.sl.t = 0;
+    game.phase = 'return';
   }
 }
 function startGame(mode, attract = false) {
@@ -1193,7 +1203,8 @@ function startGame(mode, attract = false) {
   game.hint = { done: attract };
   for (let i = 0; i < 2; i++) {
     const m = game.m[i];
-    m.r = MR; m.x = W / 2; m.y = mode === 'sling' ? (i === 0 ? L - START_OFF : START_OFF) : (i === 0 ? L - 0.2 : 0.2);
+    const home = startSpot(i);
+    m.r = MR; m.x = home.x; m.y = home.y;
     m.vx = m.vy = 0; m.tx = m.x; m.ty = m.y; m.glide = null; m.place = null; m.maxV = CLASSIC.humanSpeed;
   }
   const p = game.puck;
@@ -1302,7 +1313,8 @@ function updateFx(dt) {
 // ---------- update ----------
 let acc = 0;
 function updateClassic(dt) {
-  for (let i = 0; i < 2; i++) { if (isHuman(i)) keyboardSteer(i, dt); else aiClassic(i, dt); }
+  // during the goal pause nobody steers while the mallets go back to their starting spots
+  if (game.phase !== 'goal') for (let i = 0; i < 2; i++) { if (isHuman(i)) keyboardSteer(i, dt); else aiClassic(i, dt); }
   if (game.phase === 'ready') {
     game.timer -= dt;
     if (game.timer <= 0) { game.puck.live = true; game.puck.spawnT = 0.3; game.phase = 'live'; banner('GO!', C.puck, 700); }
