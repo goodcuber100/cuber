@@ -1,0 +1,1708 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Puck Rush</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="theme-color" content="#0a0f1f">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Chakra+Petch:wght@500;600;700&display=swap">
+<style>
+:root {
+  /* Layout: a full-bleed arcade table is the whole screen; menus are slab panels laid over a live attract-mode game. */
+  --night: #0a0f1f;
+  --night-hi: #18224a;
+  --rail: #151d38;
+  --rail-hi: #3a4c8a;
+  --panel: #111936;
+  --panel-edge: #2b3a70;
+  --ice: #f1f7fa;
+  --ice-shade: #d6e5ed;
+  --hole: rgba(38, 64, 92, 0.16);
+  --gloss: rgba(255, 255, 255, 0.4);
+  --gloss-0: rgba(255, 255, 255, 0);
+  --shadow: rgba(8, 16, 36, 0.28);
+  --spec: rgba(255, 255, 255, 0.6);
+  --ink: #eaf0ff;
+  --muted: #93a0c9;
+  --red: #ff4659;
+  --red-deep: #b3132b;
+  --red-soft: #ffa3ad;
+  --blue: #2d8bff;
+  --blue-deep: #0f4fb0;
+  --blue-soft: #a5ccff;
+  --puck: #ffcf2e;
+  --puck-body: #161a24;
+  --line: #e0354a;
+  --pu-ink: #0d1430;
+  --pu-turbo: #ffab1f;
+  --pu-giant: #2fd4a0;
+  --pu-shield: #58ccff;
+  --pu-double: #ff6ad5;
+  --pu-extra: #a6e22e;
+  --pu-ghost: #c3b3ff;
+  --font-display: "Bungee", "Arial Black", Impact, sans-serif;
+  --font-ui: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+  color-scheme: dark;
+}
+[hidden] { display: none !important; }
+html, body {
+  height: 100%;
+  margin: 0;
+  background: var(--night);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+#game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+#safe {
+  position: fixed; inset: 0; pointer-events: none; visibility: hidden;
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+}
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible { outline: 3px solid var(--puck); outline-offset: 2px; }
+
+.icon-btn {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 10px);
+  right: calc(env(safe-area-inset-right, 0px) + 10px);
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--panel-edge);
+  background: color-mix(in srgb, var(--panel) 80%, transparent);
+  display: grid; place-items: center;
+  z-index: 5;
+}
+.icon-btn span { display: flex; gap: 5px; }
+.icon-btn span::before, .icon-btn span::after { content: ""; width: 5px; height: 16px; border-radius: 2px; background: var(--ink); }
+
+#banner {
+  position: fixed; left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  font-family: var(--font-display);
+  font-size: clamp(44px, 11vmin, 120px);
+  color: var(--c, var(--ink));
+  text-shadow: 0 4px 0 var(--night), 0 0 40px var(--c, var(--ink));
+  pointer-events: none; opacity: 0; z-index: 4; white-space: nowrap;
+}
+#banner.show { animation: pop 1.1s cubic-bezier(.2, .9, .3, 1.2) forwards; }
+@keyframes pop {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(.4); }
+  18% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
+  30% { transform: translate(-50%, -50%) scale(1); }
+  80% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.04); }
+}
+#toast {
+  position: fixed; left: 50%; top: 50%;
+  transform: translate(-50%, calc(clamp(44px, 11vmin, 120px) * .9));
+  max-width: min(88vw, 420px);
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--night) 82%, transparent);
+  border: 1px solid var(--c, var(--panel-edge));
+  font-weight: 600; font-size: 14px; text-align: center;
+  pointer-events: none; opacity: 0; transition: opacity .25s; z-index: 4;
+}
+#toast b { color: var(--c, var(--ink)); font-family: var(--font-display); font-weight: 400; letter-spacing: .02em; }
+#toast.show { opacity: 1; }
+
+.overlay {
+  position: fixed; inset: 0;
+  display: flex;
+  overflow-y: auto;
+  padding-block: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  background: color-mix(in srgb, var(--night) 55%, transparent);
+  z-index: 6;
+}
+#menu { background: radial-gradient(ellipse at center, color-mix(in srgb, var(--night) 55%, transparent), color-mix(in srgb, var(--night) 88%, transparent)); }
+.menu-inner { margin: auto; width: 100%; max-width: 780px; display: grid; gap: 18px; }
+.brand { text-align: center; display: grid; gap: 4px; }
+.logo {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(40px, 10vw, 80px);
+  line-height: 1;
+  letter-spacing: .02em;
+  color: var(--ink);
+  text-shadow: 3px 3px 0 var(--red), -3px -3px 0 var(--blue);
+  text-wrap: balance;
+}
+.tag { margin: 6px 0 0; color: var(--muted); font-size: 15px; letter-spacing: .14em; text-transform: uppercase; }
+
+.modes { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.mode {
+  display: grid; gap: 6px; align-content: start;
+  text-align: left;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid var(--panel-edge);
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+  transition: transform .15s, border-color .15s;
+}
+.mode:hover { transform: translateY(-2px); border-color: var(--ink); }
+.mode svg { width: 100%; height: auto; max-height: 120px; display: block; margin-bottom: 4px; }
+.mode-name { font-family: var(--font-display); font-size: 22px; letter-spacing: .02em; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.mode-name small { font-family: var(--font-ui); font-size: 12px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--puck); }
+.mode-desc { color: var(--muted); font-size: 15px; line-height: 1.4; }
+.mode-go { margin-top: 4px; font-weight: 700; font-size: 14px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink); }
+.ill-rail { fill: var(--rail); stroke: var(--rail-hi); stroke-width: 1.5; }
+.ill-ice { fill: var(--ice); }
+.ill-line { stroke: var(--line); stroke-width: 2; fill: none; }
+.ill-red { fill: var(--red); }
+.ill-red-soft { fill: var(--red-soft); }
+.ill-blue { fill: var(--blue); }
+.ill-blue-soft { fill: var(--blue-soft); }
+.ill-puck { fill: var(--puck-body); stroke: var(--puck); stroke-width: 2; }
+.ill-motion { stroke: var(--muted); stroke-width: 2.5; stroke-linecap: round; fill: none; }
+.ill-band { stroke: var(--red-deep); stroke-width: 2; fill: none; }
+.ill-aim { stroke: var(--red); stroke-width: 2.5; stroke-dasharray: 2 5; stroke-linecap: round; fill: none; }
+.ill-pu { fill: var(--pu-turbo); }
+.ill-pu2 { fill: var(--pu-double); }
+.ill-ink { fill: var(--pu-ink); }
+
+.options { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px 18px; }
+.opt { display: grid; gap: 6px; min-width: 0; }
+.opt-label { font-size: 12px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+.seg { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px; border-radius: 12px; background: color-mix(in srgb, var(--night) 70%, transparent); border: 1px solid var(--panel-edge); }
+.seg button {
+  flex: 1 1 auto;
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 0; border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 600; font-size: 14px;
+  white-space: nowrap;
+}
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--night); }
+.note { margin: 0; text-align: center; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.note kbd { font-family: var(--font-ui); font-weight: 700; color: var(--ink); }
+
+.panel {
+  margin: auto;
+  width: 100%; max-width: 420px;
+  display: grid; gap: 14px;
+  padding: 22px;
+  border-radius: 18px;
+  border: 1px solid var(--panel-edge);
+  background: color-mix(in srgb, var(--panel) 94%, transparent);
+  text-align: center;
+}
+.panel h2 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: clamp(32px, 8vw, 48px); line-height: 1.05; color: var(--c, var(--ink)); text-wrap: balance; }
+.panel .score { font-family: var(--font-display); font-size: 28px; font-variant-numeric: tabular-nums; }
+.panel .score .r { color: var(--red); }
+.panel .score .b { color: var(--blue); }
+.panel .opt { text-align: left; }
+.btn-row { display: grid; gap: 8px; }
+.btn {
+  min-height: 46px; padding: 10px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--panel-edge);
+  background: transparent;
+  font-weight: 700; font-size: 15px; letter-spacing: .08em; text-transform: uppercase;
+}
+.btn.primary { background: var(--ink); color: var(--night); border-color: var(--ink); }
+
+@media (max-height: 560px) {
+  .menu-inner { gap: 10px; }
+  .logo { font-size: clamp(30px, 8vh, 52px); }
+  .tag { font-size: 12px; margin-top: 2px; }
+  .mode { padding: 10px 12px; gap: 2px 12px; grid-template-columns: 110px 1fr; }
+  .mode svg { grid-row: span 2; align-self: center; margin: 0; }
+  .mode-name { font-size: 18px; }
+  .mode-desc { font-size: 13px; }
+  .mode-go { display: none; }
+  .panel { padding: 16px; gap: 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #banner.show { animation-duration: .01s; opacity: 1; }
+  .mode { transition: none; }
+}
+</style>
+
+<canvas id="game" aria-label="Air hockey table"></canvas>
+<div id="safe" aria-hidden="true"></div>
+<button id="pauseBtn" class="icon-btn" aria-label="Pause" hidden><span></span></button>
+<div id="banner" aria-live="polite"></div>
+<div id="toast" role="status"></div>
+
+<section id="menu" class="overlay" aria-label="Main menu">
+  <div class="menu-inner">
+    <header class="brand">
+      <h1 class="logo">Puck Rush</h1>
+      <p class="tag">Air hockey · 1 or 2 players</p>
+    </header>
+
+    <div class="modes">
+      <button class="mode" id="mode-classic" data-mode="classic">
+        <svg viewBox="0 0 200 100" aria-hidden="true">
+          <rect x="3" y="3" width="194" height="94" rx="12" class="ill-rail"/>
+          <rect x="11" y="11" width="178" height="78" rx="6" class="ill-ice"/>
+          <line x1="100" y1="11" x2="100" y2="89" class="ill-line"/>
+          <circle cx="100" cy="50" r="15" class="ill-line"/>
+          <path d="M28 62 l16 -5 M24 52 l18 -2 M30 42 l14 2" class="ill-motion"/>
+          <circle cx="60" cy="52" r="13" class="ill-red"/>
+          <circle cx="60" cy="52" r="6" class="ill-red-soft"/>
+          <path d="M84 46 l14 -4 M86 54 l12 -1" class="ill-motion"/>
+          <circle cx="124" cy="40" r="7" class="ill-puck"/>
+          <circle cx="166" cy="50" r="13" class="ill-blue"/>
+          <circle cx="166" cy="50" r="6" class="ill-blue-soft"/>
+        </svg>
+        <span class="mode-name">Classic <small>Real time</small></span>
+        <span class="mode-desc">Your mallet follows your mouse or finger. Guard your goal and smash the puck past the other side.</span>
+        <span class="mode-go">Play Classic →</span>
+      </button>
+
+      <button class="mode" id="mode-sling" data-mode="sling">
+        <svg viewBox="0 0 200 100" aria-hidden="true">
+          <rect x="3" y="3" width="194" height="94" rx="12" class="ill-rail"/>
+          <rect x="11" y="11" width="178" height="78" rx="6" class="ill-ice"/>
+          <line x1="100" y1="11" x2="100" y2="89" class="ill-line"/>
+          <path d="M52 36 L30 52 L52 68" class="ill-band"/>
+          <circle cx="52" cy="36" r="3" class="ill-ink"/>
+          <circle cx="52" cy="68" r="3" class="ill-ink"/>
+          <circle cx="30" cy="52" r="13" class="ill-red"/>
+          <circle cx="30" cy="52" r="6" class="ill-red-soft"/>
+          <path d="M62 51 L118 44" class="ill-aim"/>
+          <circle cx="80" cy="49" r="7" class="ill-puck"/>
+          <circle cx="138" cy="30" r="11" class="ill-pu"/>
+          <path d="M139.5 22 L133 31.5 L137.6 31.5 L136 38 L143 28.5 L138.4 28.5 Z" class="ill-ink"/>
+          <circle cx="142" cy="72" r="11" class="ill-pu2"/>
+          <circle cx="174" cy="50" r="13" class="ill-blue"/>
+          <circle cx="174" cy="50" r="6" class="ill-blue-soft"/>
+        </svg>
+        <span class="mode-name">Play by Play <small>Slingshot</small></span>
+        <span class="mode-desc">Take turns. Pull your mallet back and let go to fire it at the puck. Hit power-ups with the puck to collect them.</span>
+        <span class="mode-go">Play Play by Play →</span>
+      </button>
+    </div>
+
+    <div class="options">
+      <div class="opt">
+        <span class="opt-label" id="lbl-opp">Opponent</span>
+        <div class="seg" role="group" aria-labelledby="lbl-opp" data-key="opponent">
+          <button id="opp-easy" data-v="easy">Easy CPU</button>
+          <button id="opp-medium" data-v="medium">Medium</button>
+          <button id="opp-hard" data-v="hard">Hard</button>
+          <button id="opp-2p" data-v="2p">2 Players</button>
+        </div>
+      </div>
+      <div class="opt">
+        <span class="opt-label" id="lbl-target">Goals to win</span>
+        <div class="seg" role="group" aria-labelledby="lbl-target" data-key="target">
+          <button id="target-3" data-v="3">3</button>
+          <button id="target-5" data-v="5">5</button>
+          <button id="target-7" data-v="7">7</button>
+          <button id="target-10" data-v="10">10</button>
+        </div>
+      </div>
+      <div class="opt">
+        <span class="opt-label" id="lbl-orient">Table</span>
+        <div class="seg" role="group" aria-labelledby="lbl-orient" data-key="orient">
+          <button id="orient-auto" data-v="auto">Fit screen</button>
+          <button id="orient-h" data-v="h">Horizontal</button>
+          <button id="orient-v" data-v="v">Vertical</button>
+        </div>
+      </div>
+      <div class="opt">
+        <span class="opt-label" id="lbl-sound">Sound</span>
+        <div class="seg" role="group" aria-labelledby="lbl-sound" data-key="sound">
+          <button id="sound-on" data-v="on">On</button>
+          <button id="sound-off" data-v="off">Off</button>
+        </div>
+      </div>
+    </div>
+
+    <p class="note">Mouse, touch or keyboard. Player 1 moves with <kbd>WASD</kbd>, player 2 with the <kbd>arrow keys</kbd>. <kbd>Esc</kbd> pauses.<br>With 2 players on one screen, each player touches their own half.</p>
+  </div>
+</section>
+
+<section id="pause" class="overlay" aria-label="Paused" hidden>
+  <div class="panel">
+    <h2>Paused</h2>
+    <div class="btn-row">
+      <button class="btn primary" id="btn-resume">Resume</button>
+      <button class="btn" id="btn-restart">Restart</button>
+    </div>
+    <div class="opt">
+      <span class="opt-label" id="lbl-orient-p">Table</span>
+      <div class="seg" role="group" aria-labelledby="lbl-orient-p" data-key="orient">
+        <button id="p-orient-auto" data-v="auto">Fit screen</button>
+        <button id="p-orient-h" data-v="h">Horizontal</button>
+        <button id="p-orient-v" data-v="v">Vertical</button>
+      </div>
+    </div>
+    <div class="opt">
+      <span class="opt-label" id="lbl-sound-p">Sound</span>
+      <div class="seg" role="group" aria-labelledby="lbl-sound-p" data-key="sound">
+        <button id="p-sound-on" data-v="on">On</button>
+        <button id="p-sound-off" data-v="off">Off</button>
+      </div>
+    </div>
+    <button class="btn" id="btn-quit">Main menu</button>
+  </div>
+</section>
+
+<section id="over" class="overlay" aria-label="Game over" hidden>
+  <div class="panel">
+    <h2 id="over-title">You win!</h2>
+    <div class="score" id="over-score"></div>
+    <div class="btn-row">
+      <button class="btn primary" id="btn-rematch">Rematch</button>
+      <button class="btn" id="btn-menu">Main menu</button>
+    </div>
+  </div>
+</section>
+
+<script>
+(() => {
+'use strict';
+
+// ---------- table geometry, in table units (table width = 1) ----------
+// The physics always runs on a vertical table: player 0 (red) defends the goal at y = L,
+// player 1 (blue) defends the goal at y = 0. Only the renderer rotates it.
+const W = 1, L = 1.75, HALF = L / 2;
+const PR = 0.042, MR = 0.068, PU_R = 0.05;
+const GOAL_W = 0.36, GX0 = (W - GOAL_W) / 2, GX1 = (W + GOAL_W) / 2;
+const RAIL = 0.075, END_ROOM = 56;
+const DT = 1 / 240;
+const MAX_PULL = 0.3, GUARD_OFF = 0.14;
+
+const CLASSIC = { damp: 0.1, wallE: 0.9, hitE: 0.9, maxPuck: 6.5, humanSpeed: 11 };
+const SLING = {
+  puckDamp: 1.1, puckFric: 0.25, malDamp: 2.2, malFric: 0.6,
+  wallE: 0.82, malWallE: 0.55, hitE: 0.92, malInv: 0.5,
+  maxPuck: 5, maxLaunch: 3.3, turbo: 1.45, giant: 1.45,
+};
+// Classic CPU: top speed, how often it re-reads the table, aim error, how far off its blocks are,
+// how closely it shadows the puck, and how often it tries a bank shot.
+const AIC = {
+  easy:   { speed: 2.3, react: 0.2,   err: 0.11,  block: 0.11,  track: 0.45, bank: 0.1 },
+  medium: { speed: 3.5, react: 0.11,  err: 0.055, block: 0.06,  track: 0.65, bank: 0.25 },
+  hard:   { speed: 5.0, react: 0.045, err: 0.02,  block: 0.025, track: 0.85, bank: 0.4 },
+};
+// Play-by-play CPU: shots it simulates, then aim and power wobble when it fires.
+const AIS = {
+  easy:   { n: 26,  ang: 0.12, pow: 0.18, jitter: 30 },
+  medium: { n: 80,  ang: 0.06, pow: 0.1,  jitter: 12 },
+  hard:   { n: 240, ang: 0.03, pow: 0.06, jitter: 3 },
+};
+const PU = {
+  turbo:  { name: 'Turbo',      desc: 'Next launch hits 50% harder.' },
+  giant:  { name: 'Giant',      desc: 'Mallet grows for the next two shots.' },
+  shield: { name: 'Shield',     desc: 'A wall covers the goal until it blocks a shot.' },
+  double: { name: 'Double',     desc: 'Next goal counts twice.' },
+  extra:  { name: 'Extra shot', desc: 'Shoots again after this turn.' },
+  ghost:  { name: 'Ghost',      desc: 'Next shot passes straight through the other mallet.' },
+};
+const PU_WEIGHT = { turbo: 1.2, giant: 1, shield: 1, double: 0.8, extra: 0.8, ghost: 0.9 };
+const PU_VALUE = { turbo: 24, giant: 22, shield: 26, double: 28, extra: 34, ghost: 24 };
+
+const $ = s => document.querySelector(s);
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const gauss = () => (Math.random() + Math.random() + Math.random() - 1.5) * 2;
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const coarse = matchMedia('(pointer: coarse)').matches;
+
+// ---------- settings ----------
+const KEY = 'puckrush.settings';
+const OPTS = { opponent: ['easy', 'medium', 'hard', '2p'], target: ['3', '5', '7', '10'], orient: ['auto', 'h', 'v'], sound: ['on', 'off'] };
+const settings = { opponent: 'medium', target: '5', orient: 'auto', sound: 'on' };
+function loadSettings(src) {
+  for (const k in OPTS) if (src && OPTS[k].includes(String(src[k]))) settings[k] = String(src[k]);
+}
+try { loadSettings(JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) { /* storage blocked */ }
+function saveSettings() { try { localStorage.setItem(KEY, JSON.stringify(settings)); } catch (e) { /* storage blocked */ } }
+
+// ---------- colors and fonts come from the CSS tokens ----------
+const C = {};
+let PC, PD, PS, PUC, FONT_D, FONT_U;
+function readColors() {
+  const cs = getComputedStyle(document.documentElement);
+  for (const k of ['night', 'night-hi', 'rail', 'rail-hi', 'ice', 'ice-shade', 'hole', 'gloss', 'gloss-0', 'shadow', 'spec',
+    'ink', 'muted', 'red', 'red-deep', 'red-soft', 'blue', 'blue-deep', 'blue-soft', 'puck', 'puck-body', 'line',
+    'pu-ink', 'pu-turbo', 'pu-giant', 'pu-shield', 'pu-double', 'pu-extra', 'pu-ghost']) {
+    C[k] = cs.getPropertyValue('--' + k).trim();
+  }
+  PC = [C.red, C.blue]; PD = [C['red-deep'], C['blue-deep']]; PS = [C['red-soft'], C['blue-soft']];
+  PUC = {};
+  for (const t in PU) PUC[t] = C['pu-' + t];
+  FONT_D = cs.getPropertyValue('--font-display').trim();
+  FONT_U = cs.getPropertyValue('--font-ui').trim();
+}
+
+// ---------- sound (synthesized, starts on first tap or click) ----------
+let actx = null, master = null, noiseBuf = null;
+const lastSnd = {};
+function ensureAudio() {
+  if (actx) { if (actx.state === 'suspended') actx.resume(); return; }
+  try {
+    actx = new (window.AudioContext || window.webkitAudioContext)();
+    master = actx.createGain(); master.gain.value = 0.5; master.connect(actx.destination);
+  } catch (e) { actx = null; }
+}
+function canPlay(key, gap) {
+  if (!actx || settings.sound !== 'on' || game.attract) return false;
+  const t = performance.now();
+  if (lastSnd[key] && t - lastSnd[key] < gap) return false;
+  lastSnd[key] = t;
+  return true;
+}
+function tone(f0, f1, dur, type, vol, delay = 0) {
+  const t0 = actx.currentTime + delay, o = actx.createOscillator(), g = actx.createGain();
+  o.type = type; o.frequency.setValueAtTime(f0, t0);
+  if (f1) o.frequency.exponentialRampToValueAtTime(f1, t0 + dur);
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(Math.max(0.0002, vol), t0 + 0.006);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  o.connect(g).connect(master); o.start(t0); o.stop(t0 + dur + 0.03);
+}
+function hiss(dur, vol, f0, f1, q = 1, delay = 0) {
+  if (!noiseBuf) {
+    noiseBuf = actx.createBuffer(1, actx.sampleRate * 0.6, actx.sampleRate);
+    const d = noiseBuf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  }
+  const t0 = actx.currentTime + delay, s = actx.createBufferSource(), f = actx.createBiquadFilter(), g = actx.createGain();
+  s.buffer = noiseBuf; f.type = 'bandpass'; f.Q.value = q;
+  f.frequency.setValueAtTime(f0, t0); f.frequency.exponentialRampToValueAtTime(f1, t0 + dur);
+  g.gain.setValueAtTime(Math.max(0.0002, vol), t0); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  s.connect(f).connect(g).connect(master); s.start(t0); s.stop(t0 + dur + 0.03);
+}
+const sfx = {
+  hit(s) { if (!canPlay('hit', 35)) return; const v = Math.min(1, 0.2 + s / 5); tone(1150, 380, 0.07, 'triangle', 0.35 * v); hiss(0.04, 0.25 * v, 3200, 1200, 2); },
+  wall(s) { const v = Math.min(1, s / 5); if (v < 0.06 || !canPlay('wall', 40)) return; tone(260, 140, 0.08, 'sine', 0.35 * v); hiss(0.05, 0.12 * v, 1500, 500, 1.5); },
+  goal() { if (!canPlay('goal', 300)) return; [523, 659, 784, 1047].forEach((f, i) => tone(f, 0, 0.24, 'square', 0.1, i * 0.09)); hiss(0.7, 0.18, 700, 4000, 0.7); },
+  launch(p) { if (!canPlay('launch', 80)) return; hiss(0.28, 0.06 + 0.22 * p, 350, 2600, 1.2); },
+  pu() { if (!canPlay('pu', 80)) return; tone(880, 0, 0.1, 'sine', 0.25); tone(1320, 0, 0.16, 'sine', 0.22, 0.08); tone(1760, 0, 0.22, 'sine', 0.18, 0.16); },
+  shield() { if (!canPlay('shield', 120)) return; tone(520, 1300, 0.2, 'sawtooth', 0.1); hiss(0.2, 0.15, 5000, 2000, 3); },
+  tick() { if (!canPlay('tick', 40)) return; tone(760, 520, 0.04, 'square', 0.05); },
+  win() { if (!canPlay('win', 500)) return; [392, 523, 659, 784, 1047].forEach((f, i) => tone(f, 0, 0.32, 'triangle', 0.18, i * 0.11)); },
+};
+let lastPointerType = 'mouse';
+function buzz(ms) { if (lastPointerType === 'touch' && navigator.vibrate) { try { navigator.vibrate(ms); } catch (e) { /* not allowed */ } } }
+
+// ---------- view: fits the table to the screen, rotated when horizontal ----------
+const canvas = $('#game'), ctx = canvas.getContext('2d');
+const view = { w: 1, h: 1, dpr: 1, horiz: false, s: 100, cx: 0, cy: 0, light: { x: 0, y: 0 }, shadow: { x: 0, y: 0 }, bg: null };
+let tableCv = null;
+
+function layout() {
+  const vw = window.innerWidth, vh = window.innerHeight;
+  view.dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+  canvas.width = Math.max(1, Math.round(vw * view.dpr));
+  canvas.height = Math.max(1, Math.round(vh * view.dpr));
+  view.w = vw; view.h = vh;
+  const cs = getComputedStyle($('#safe')), pad = 8;
+  const l = (parseFloat(cs.paddingLeft) || 0) + pad, r = (parseFloat(cs.paddingRight) || 0) + pad;
+  const t = (parseFloat(cs.paddingTop) || 0) + pad, b = (parseFloat(cs.paddingBottom) || 0) + pad;
+  const aw = Math.max(60, vw - l - r), ah = Math.max(60, vh - t - b);
+  view.horiz = settings.orient === 'h' || (settings.orient === 'auto' && vw > vh);
+  const tw = W + 2 * RAIL, tl = L + 2 * RAIL;
+  // keep room past each end of the table for the player labels and power-up chips
+  view.s = view.horiz
+    ? Math.min((aw - 2 * END_ROOM) / tl, ah / tw)
+    : Math.min(aw / tw, (ah - 2 * END_ROOM) / tl);
+  view.s = Math.max(40, view.s);
+  view.cx = l + aw / 2; view.cy = t + ah / 2;
+  // light comes from the top left of the screen, whichever way the table is turned
+  view.light = view.horiz ? { x: -0.7071, y: 0.7071 } : { x: -0.7071, y: -0.7071 };
+  view.shadow = view.horiz ? { x: 0.016, y: -0.011 } : { x: 0.011, y: 0.016 };
+  const g = ctx.createRadialGradient(vw / 2, vh / 2, 0, vw / 2, vh / 2, Math.max(vw, vh) * 0.75);
+  g.addColorStop(0, C['night-hi']); g.addColorStop(1, C.night);
+  view.bg = g;
+  buildTable();
+}
+function toScreen(x, y) {
+  const dx = (x - W / 2) * view.s, dy = (y - HALF) * view.s;
+  return view.horiz ? [view.cx - dy, view.cy + dx] : [view.cx + dx, view.cy + dy];
+}
+function toTable(sx, sy) {
+  const dx = (sx - view.cx) / view.s, dy = (sy - view.cy) / view.s;
+  return view.horiz ? { x: W / 2 + dy, y: HALF - dx } : { x: W / 2 + dx, y: HALF + dy };
+}
+function tableTransform(ox, oy) {
+  ctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
+  ctx.translate(view.cx + ox, view.cy + oy);
+  if (view.horiz) ctx.rotate(Math.PI / 2);
+  ctx.scale(view.s, view.s);
+  ctx.translate(-W / 2, -HALF);
+}
+function rr(g, x, y, w, h, r) {
+  g.beginPath(); g.moveTo(x + r, y);
+  g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r);
+  g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath();
+}
+
+// The static table (rails, ice, air holes, markings) is drawn once per layout.
+function buildTable() {
+  const k = view.s * view.dpr, tw = W + 2 * RAIL, tl = L + 2 * RAIL;
+  const cv = tableCv || (tableCv = document.createElement('canvas'));
+  cv.width = Math.max(1, Math.ceil(tw * k)); cv.height = Math.max(1, Math.ceil(tl * k));
+  const g = cv.getContext('2d');
+  g.setTransform(k, 0, 0, k, RAIL * k, RAIL * k);
+
+  const rg = g.createLinearGradient(-RAIL, 0, W + RAIL, 0);
+  rg.addColorStop(0, C['rail-hi']); rg.addColorStop(0.1, C.rail); rg.addColorStop(0.9, C.rail); rg.addColorStop(1, C['rail-hi']);
+  g.fillStyle = rg; rr(g, -RAIL, -RAIL, tw, tl, RAIL); g.fill();
+  g.strokeStyle = C['rail-hi']; g.lineWidth = 0.005;
+  rr(g, -RAIL + 0.004, -RAIL + 0.004, tw - 0.008, tl - 0.008, RAIL - 0.004); g.stroke();
+
+  for (const owner of [0, 1]) {
+    const y0 = owner === 1 ? -RAIL * 0.72 : L;
+    g.fillStyle = C.night; rr(g, GX0, y0, GOAL_W, RAIL * 0.72, 0.012); g.fill();
+    g.fillStyle = PC[owner]; g.fillRect(GX0, owner === 1 ? -0.007 : L, GOAL_W, 0.007);
+  }
+
+  g.save(); rr(g, 0, 0, W, L, PR); g.clip();
+  const ig = g.createLinearGradient(0, 0, W, L);
+  ig.addColorStop(0, C.ice); ig.addColorStop(1, C['ice-shade']);
+  g.fillStyle = ig; g.fillRect(0, 0, W, L);
+  g.fillStyle = C.hole; g.beginPath();
+  const sp = 0.05, hr = 0.0048;
+  for (let y = sp / 2; y < L; y += sp) for (let x = sp / 2; x < W; x += sp) { g.moveTo(x + hr, y); g.arc(x, y, hr, 0, Math.PI * 2); }
+  g.fill();
+
+  g.globalAlpha = 0.9; g.fillStyle = C.line; g.strokeStyle = C.line; g.lineWidth = 0.006;
+  g.fillRect(0, HALF - 0.006, W, 0.012);
+  g.beginPath(); g.arc(W / 2, HALF, 0.14, 0, Math.PI * 2); g.stroke();
+  g.beginPath(); g.arc(W / 2, HALF, 0.016, 0, Math.PI * 2); g.fill();
+  for (const owner of [0, 1]) {
+    const gy = owner === 0 ? L : 0, a0 = owner === 0 ? Math.PI : 0, a1 = a0 + Math.PI;
+    g.globalAlpha = 0.1; g.fillStyle = PC[owner];
+    g.beginPath(); g.arc(W / 2, gy, 0.2, a0, a1); g.closePath(); g.fill();
+    g.globalAlpha = 0.75; g.strokeStyle = PC[owner];
+    g.beginPath(); g.arc(W / 2, gy, 0.2, a0, a1); g.stroke();
+    g.globalAlpha = 0.35;
+    g.beginPath(); g.arc(W / 2, owner === 0 ? HALF + 0.43 : HALF - 0.43, 0.075, 0, Math.PI * 2); g.stroke();
+  }
+  g.globalAlpha = 1;
+  const gl = g.createRadialGradient(W * 0.3, L * 0.28, 0, W * 0.3, L * 0.28, L * 0.75);
+  gl.addColorStop(0, C.gloss); gl.addColorStop(1, C['gloss-0']);
+  g.fillStyle = gl; g.fillRect(0, 0, W, L);
+  g.restore();
+  g.strokeStyle = C.shadow; g.lineWidth = 0.008; rr(g, 0, 0, W, L, PR); g.stroke();
+}
+
+// ---------- game state ----------
+const newEffects = () => ({ turbo: false, giant: 0, double: false, extra: false, ghost: false });
+const newMallet = i => ({ x: W / 2, y: i === 0 ? L - 0.2 : 0.2, vx: 0, vy: 0, r: MR, tx: W / 2, ty: i === 0 ? L - 0.2 : 0.2, maxV: CLASSIC.humanSpeed, glide: null, place: null });
+const game = {
+  mode: 'classic', state: 'menu', attract: true, twoP: false, diff: 'medium', target: 5,
+  scores: [0, 0], phase: 'live', timer: 0, time: 0, launches: 0,
+  puck: { x: W / 2, y: HALF, vx: 0, vy: 0, r: PR, live: false, spawnT: 0 },
+  m: [newMallet(0), newMallet(1)],
+  pus: [], shields: [false, false], active: -1, ghost: false, turboShot: false,
+  players: [newEffects(), newEffects()],
+  ai: [{}, {}], kb: [{ v: 0 }, { v: 0 }],
+  sl: { turn: 0, shooter: 0, next: 0, t: 0, rest: 0, drag: null, pull: null, touched: false, cpu: null },
+  plan: null, hint: { done: true }, nextConceder: 0,
+};
+const isHuman = i => !game.attract && (game.twoP || i === 0);
+function pname(i) {
+  if (game.twoP || game.attract) return i === 0 ? 'Red' : 'Blue';
+  return i === 0 ? 'You' : 'CPU';
+}
+
+// ---------- physics ----------
+function capSpeed(o, max) {
+  const s = Math.hypot(o.vx, o.vy);
+  if (s > max) { o.vx *= max / s; o.vy *= max / s; }
+}
+function friction(o, damp, fric, dt) {
+  const s = Math.hypot(o.vx, o.vy);
+  if (s === 0) return;
+  const k = Math.max(0, s - (damp * s + fric) * dt) / s;
+  o.vx *= k; o.vy *= k;
+}
+// Circle a against circle b. ia/ib are inverse masses (0 = immovable, like a held mallet).
+function collide(a, b, ia, ib, e, ev, who) {
+  const dx = b.x - a.x, dy = b.y - a.y, minD = a.r + b.r, d2 = dx * dx + dy * dy;
+  if (d2 >= minD * minD) return false;
+  const sum = ia + ib;
+  if (sum === 0) return false;
+  let d = Math.sqrt(d2), nx, ny;
+  if (d < 1e-9) { nx = 0; ny = who === 0 ? -1 : 1; d = 0; } else { nx = dx / d; ny = dy / d; }
+  const ov = minD - d;
+  a.x -= nx * ov * ia / sum; a.y -= ny * ov * ia / sum;
+  b.x += nx * ov * ib / sum; b.y += ny * ov * ib / sum;
+  const rv = (b.vx - a.vx) * nx + (b.vy - a.vy) * ny;
+  if (rv < 0) {
+    const j = -(1 + e) * rv / sum;
+    a.vx -= j * ia * nx; a.vy -= j * ia * ny;
+    b.vx += j * ib * nx; b.vy += j * ib * ny;
+    if (ev) ev.hit(a.x + nx * a.r, a.y + ny * a.r, -rv, who);
+  }
+  return true;
+}
+function post(p, px, py, e, ev) {
+  const dx = p.x - px, dy = p.y - py, d2 = dx * dx + dy * dy;
+  if (d2 >= p.r * p.r || d2 < 1e-12) return;
+  const d = Math.sqrt(d2), nx = dx / d, ny = dy / d;
+  p.x = px + nx * p.r; p.y = py + ny * p.r;
+  const vn = p.vx * nx + p.vy * ny;
+  if (vn < 0) { p.vx -= (1 + e) * vn * nx; p.vy -= (1 + e) * vn * ny; ev.wall(p, -vn); }
+}
+// Walls, goal posts, shields and goals for the puck. Returns true when a goal went in.
+function puckBounds(w, e, ev) {
+  const p = w.puck, r = p.r;
+  post(p, GX0, 0, e, ev); post(p, GX1, 0, e, ev); post(p, GX0, L, e, ev); post(p, GX1, L, e, ev);
+  if (p.x < r) { p.x = r; if (p.vx < 0) { ev.wall(p, -p.vx); p.vx = -p.vx * e; } }
+  else if (p.x > W - r) { p.x = W - r; if (p.vx > 0) { ev.wall(p, p.vx); p.vx = -p.vx * e; } }
+  const mouth = p.x > GX0 && p.x < GX1;
+  if (p.y < r) {
+    if (mouth && !w.shields[1]) {
+      if (p.y < 0) { ev.goal(0); return true; }
+    } else {
+      p.y = r;
+      if (p.vy < 0) {
+        if (mouth) { w.shields[1] = false; ev.shield(1, p); } else ev.wall(p, -p.vy);
+        p.vy = -p.vy * e;
+      }
+    }
+  } else if (p.y > L - r) {
+    if (mouth && !w.shields[0]) {
+      if (p.y > L) { ev.goal(1); return true; }
+    } else {
+      p.y = L - r;
+      if (p.vy > 0) {
+        if (mouth) { w.shields[0] = false; ev.shield(0, p); } else ev.wall(p, p.vy);
+        p.vy = -p.vy * e;
+      }
+    }
+  }
+  return false;
+}
+function malletWalls(m, e) {
+  if (m.x < m.r) { m.x = m.r; if (m.vx < 0) m.vx = -m.vx * e; }
+  else if (m.x > W - m.r) { m.x = W - m.r; if (m.vx > 0) m.vx = -m.vx * e; }
+  if (m.y < m.r) { m.y = m.r; if (m.vy < 0) m.vy = -m.vy * e; }
+  else if (m.y > L - m.r) { m.y = L - m.r; if (m.vy > 0) m.vy = -m.vy * e; }
+}
+// In Classic each mallet stays in its own half.
+function clampHalf(i, x, y, r) {
+  return [clamp(x, r, W - r), i === 0 ? clamp(y, HALF + r, L - r) : clamp(y, r, HALF - r)];
+}
+
+function stepClassic(dt) {
+  const p = game.puck;
+  for (let i = 0; i < 2; i++) {
+    const m = game.m[i];
+    const [tx, ty] = clampHalf(i, m.tx, m.ty, m.r);
+    let dx = tx - m.x, dy = ty - m.y;
+    const d = Math.hypot(dx, dy), max = m.maxV * dt;
+    if (d > max) { dx *= max / d; dy *= max / d; }
+    m.x += dx; m.y += dy; m.vx = dx / dt; m.vy = dy / dt;
+  }
+  if (!p.live) return;
+  p.x += p.vx * dt; p.y += p.vy * dt;
+  const f = 1 - CLASSIC.damp * dt; p.vx *= f; p.vy *= f;
+  if (puckBounds(game, CLASSIC.wallE, liveEv)) return;
+  for (let i = 0; i < 2; i++) collide(game.m[i], p, 0, 1, CLASSIC.hitE, liveEv, i);
+  if (puckBounds(game, CLASSIC.wallE, liveEv)) return;
+  // a puck pinned against the rail pushes the mallet back instead of passing through it
+  for (let i = 0; i < 2; i++) {
+    const m = game.m[i], dx = m.x - p.x, dy = m.y - p.y, d = Math.hypot(dx, dy), need = m.r + p.r;
+    if (d < need && d > 1e-9) {
+      [m.x, m.y] = clampHalf(i, p.x + dx / d * need, p.y + dy / d * need, m.r);
+    }
+  }
+  capSpeed(p, CLASSIC.maxPuck);
+}
+
+// Play by Play: one launched mallet slides with friction, the waiting mallet is a fixed blocker.
+function stepSling(w, dt, ev) {
+  const p = w.puck, ai = w.active, a = ai >= 0 ? w.m[ai] : null, g = ai >= 0 ? w.m[1 - ai] : null;
+  if (p.live) { p.x += p.vx * dt; p.y += p.vy * dt; friction(p, SLING.puckDamp, SLING.puckFric, dt); }
+  if (a) { a.x += a.vx * dt; a.y += a.vy * dt; friction(a, SLING.malDamp, SLING.malFric, dt); malletWalls(a, SLING.malWallE); }
+  if (!p.live) return false;
+  if (puckBounds(w, SLING.wallE, ev)) return true;
+  if (a) collide(a, p, SLING.malInv, 1, SLING.hitE, ev, ai);
+  if (g && !w.ghost) {
+    collide(g, p, 0, 1, SLING.hitE, ev, 1 - ai);
+    if (a) collide(g, a, 0, SLING.malInv, 0.6, ev, -2);
+  }
+  if (puckBounds(w, SLING.wallE, ev)) return true;
+  if (a) malletWalls(a, SLING.malWallE);
+  for (let k = w.pus.length - 1; k >= 0; k--) {
+    const u = w.pus[k], dx = p.x - u.x, dy = p.y - u.y, rr2 = PR + PU_R * 0.9;
+    if (dx * dx + dy * dy < rr2 * rr2) { w.pus.splice(k, 1); ev.pu(u); }
+  }
+  capSpeed(p, SLING.maxPuck);
+  return false;
+}
+
+// What the live game does when the physics reports something.
+const liveEv = {
+  hit(x, y, s, who) {
+    sfx.hit(s);
+    sparks(x, y, Math.min(14, 3 + s * 2.2), who >= 0 ? PC[who] : C.ink, 0.6 + s * 0.25);
+    if (who >= 0 && isHuman(who)) { buzz(8); game.hint.done = true; }
+  },
+  wall(p, s) { if (s > 0.35) { sfx.wall(s); if (s > 2) sparks(p.x, p.y, 3, C.ice, 0.6); } },
+  goal(scorer) { onGoal(scorer); },
+  pu(u) { collect(u); },
+  shield(owner, p) {
+    sfx.shield();
+    sparks(p.x, owner === 0 ? L : 0, 18, C['pu-shield'], 1.2);
+    floatText(p.x, owner === 0 ? L - 0.08 : 0.08, 'BLOCKED', C['pu-shield']);
+  },
+};
+
+// ---------- Classic ----------
+function predictX(px, py, vx, vy, yLine) {
+  const t = (yLine - py) / vy;
+  if (!(t > 0) || !isFinite(t)) return px;
+  const span = W - 2 * PR;
+  let u = (px + vx * t - PR) % (2 * span);
+  if (u < 0) u += 2 * span;
+  return u < span ? PR + u : PR + 2 * span - u;
+}
+// The CPU thinks in its own frame, with its goal at y = 0, so it can play either end.
+function aiClassic(i, dt) {
+  const st = game.ai[i], P = AIC[st.diff], m = game.m[i], p = game.puck;
+  m.maxV = P.speed;
+  st.t -= dt;
+  if (st.t > 0) return;
+  const interval = P.react * (0.7 + Math.random() * 0.6);
+  st.t = interval;
+  const flip = i === 0;
+  const px = p.x, py = flip ? L - p.y : p.y, pvx = p.vx, pvy = flip ? -p.vy : p.vy;
+  const mx = m.x, my = flip ? L - m.y : m.y;
+  const homeY = m.r + 0.11, reach = PR + m.r;
+  let tx, ty;
+  if (!p.live) { tx = W / 2; ty = homeY; st.mode = ''; }
+  else if (py < HALF + PR * 0.5) {
+    if (pvy < -1.0 && py > my + 0.02) {
+      // incoming fast: step into its path (misjudged by a fixed amount for the whole block)
+      if (st.mode !== 'block') { st.mode = 'block'; st.miss = gauss() * P.block; }
+      const yLine = Math.max(homeY * 0.8, Math.min(my, py - 0.05));
+      tx = predictX(px, py, pvx, pvy, yLine) + st.miss; ty = yLine;
+    } else {
+      if (st.mode !== 'attack') {
+        st.mode = 'attack'; st.attackT = 0;
+        st.aimX = W / 2 + (Math.random() * 2 - 1) * GOAL_W * 0.3;
+        st.bank = Math.random() < P.bank ? (Math.random() < 0.5 ? -1 : 1) : 0;
+      }
+      st.attackT += interval;
+      const fx = clamp(px + pvx * 0.08, PR, W - PR), fy = clamp(py + pvy * 0.08, PR, HALF);
+      const gx = st.bank < 0 ? -st.aimX : st.bank > 0 ? 2 * W - st.aimX : st.aimX;
+      let dx = gx - fx, dy = L - fy;
+      const d = Math.hypot(dx, dy); dx = dx / d + (Math.random() * 2 - 1) * P.err; dy /= d;
+      const bx = fx - dx * (reach + 0.05), by = fy - dy * (reach + 0.05);
+      if (st.attackT > 1.4) {
+        // taking too long to line up: just hit it
+        tx = fx + (fx - mx) * 0.6; ty = fy + (fy - my) * 0.6;
+        if (st.attackT > 2) st.mode = '';
+      } else if (my > fy - PR * 0.3) {
+        // on the wrong side of the puck: go around it
+        let side = mx < fx ? -1 : 1;
+        if (fx + side * (reach + 0.03) < m.r || fx + side * (reach + 0.03) > W - m.r) side = -side;
+        tx = fx + side * (reach + 0.03); ty = Math.max(m.r, fy - reach * 0.8);
+      } else if (Math.hypot(mx - bx, my - by) > 0.05) {
+        tx = bx; ty = by;
+      } else {
+        tx = fx + dx * 0.22; ty = fy + dy * 0.22;
+      }
+    }
+  } else {
+    st.mode = '';
+    let ex = px;
+    if (pvy < -0.3) ex = predictX(px, py, pvx, pvy, homeY);
+    tx = W / 2 + (ex - W / 2) * P.track; ty = homeY;
+  }
+  m.tx = tx; m.ty = flip ? L - ty : ty;
+}
+function keyboardSteer(i, dt) {
+  const k = game.kb[i];
+  let sx = 0, sy = 0;
+  const wasd = i === 0, arrows = game.twoP ? i === 1 : i === 0;
+  if (wasd) { if (keys.KeyA) sx--; if (keys.KeyD) sx++; if (keys.KeyW) sy--; if (keys.KeyS) sy++; }
+  if (arrows) { if (keys.ArrowLeft) sx--; if (keys.ArrowRight) sx++; if (keys.ArrowUp) sy--; if (keys.ArrowDown) sy++; }
+  if (!sx && !sy) { k.v = 0; return; }
+  const n = Math.hypot(sx, sy); sx /= n; sy /= n;
+  // keys move the mallet in screen directions, so "up" is always up on screen
+  const dx = view.horiz ? sy : sx, dy = view.horiz ? -sx : sy;
+  k.v = Math.min(3.6, k.v + dt * 24);
+  const m = game.m[i];
+  [m.tx, m.ty] = clampHalf(i, m.x + dx * k.v * dt * 1.5, m.y + dy * k.v * dt * 1.5, m.r);
+}
+function steer(i, c) {
+  const m = game.m[i];
+  [m.tx, m.ty] = clampHalf(i, c.x, c.y, m.r);
+  game.kb[i].v = 0;
+}
+
+// ---------- Play by Play ----------
+function placeClamp(i, x, y, r) {
+  const p = game.puck, need = PR + r + 0.004;
+  for (let pass = 0; pass < 2; pass++) {
+    [x, y] = clampHalf(i, x, y, r);
+    const dx = x - p.x, dy = y - p.y, d = Math.hypot(dx, dy);
+    if (p.live && d < need) {
+      if (d < 1e-6) { y += i === 0 ? need : -need; } else { x = p.x + dx / d * need; y = p.y + dy / d * need; }
+    }
+  }
+  return [x, y];
+}
+function guardSpot(i) {
+  const r = game.m[i].r, p = game.puck;
+  let x = W / 2, y = i === 0 ? L - GUARD_OFF : GUARD_OFF;
+  const need = PR + r + 0.012;
+  if (p.live && Math.hypot(p.x - x, p.y - y) < need) {
+    const dy = p.y - y, off = Math.sqrt(Math.max(0, need * need - dy * dy)) + 0.002;
+    const left = p.x - off, right = p.x + off, okL = left >= r, okR = right <= W - r;
+    if (okL && (!okR || Math.abs(left - W / 2) < Math.abs(right - W / 2))) x = left;
+    else if (okR) x = right;
+    else y += (i === 0 ? -1 : 1) * need;
+  }
+  return { x, y };
+}
+function pickPowerup() {
+  let total = 0;
+  for (const t in PU_WEIGHT) total += PU_WEIGHT[t];
+  let r = Math.random() * total;
+  for (const t in PU_WEIGHT) { r -= PU_WEIGHT[t]; if (r <= 0) return t; }
+  return 'turbo';
+}
+function spawnPowerup() {
+  const p = game.puck;
+  for (let tries = 0; tries < 60; tries++) {
+    const x = 0.1 + Math.random() * (W - 0.2), y = 0.42 + Math.random() * (L - 0.84);
+    if (Math.hypot(x - p.x, y - p.y) < PR + PU_R + 0.07) continue;
+    if (game.m.some(m => Math.hypot(x - m.x, y - m.y) < m.r + PU_R + 0.05)) continue;
+    if (game.pus.some(u => Math.hypot(x - u.x, y - u.y) < PU_R * 2 + 0.12)) continue;
+    game.pus.push({ x, y, type: pickPowerup(), ttl: 8, seed: Math.random() * 6, born: game.time });
+    return;
+  }
+}
+function beginTurn(i) {
+  const sl = game.sl;
+  sl.turn = i; sl.t = 0; sl.touched = false; sl.pull = null; sl.drag = null; sl.cpu = null;
+  game.m[i].place = null;
+  if (game.pus.length < 3 && (game.pus.length === 0 || Math.random() < 0.5)) spawnPowerup();
+  if (isHuman(i)) game.phase = 'aim';
+  else { game.phase = 'think'; startPlan(i); }
+  if (!game.attract && game.twoP) sfx.tick();
+}
+function launch(i, dx, dy, pow) {
+  const pl = game.players[i], m = game.m[i];
+  const sp = pow * SLING.maxLaunch * (pl.turbo ? SLING.turbo : 1);
+  game.turboShot = pl.turbo; pl.turbo = false;
+  game.ghost = pl.ghost; pl.ghost = false;
+  if (m.place) { m.x = m.place.x; m.y = m.place.y; m.place = null; }
+  m.glide = null; m.vx = dx * sp; m.vy = dy * sp;
+  game.active = i; game.sl.shooter = i; game.sl.pull = null; game.sl.t = 0; game.sl.rest = 0;
+  game.phase = 'moving'; game.launches++;
+  sfx.launch(pow);
+  if (isHuman(i)) buzz(15);
+}
+function shotOver(i) {
+  const pl = game.players[i];
+  if (pl.giant > 0 && --pl.giant === 0) game.m[i].r = MR;
+  for (const u of game.pus) u.ttl--;
+  game.pus = game.pus.filter(u => {
+    if (u.ttl > 0) return true;
+    sparks(u.x, u.y, 8, PUC[u.type], 0.5);
+    return false;
+  });
+  game.active = -1; game.ghost = false; game.turboShot = false;
+}
+function endShot() {
+  const i = game.sl.shooter, pl = game.players[i];
+  game.puck.vx = game.puck.vy = 0;
+  for (const m of game.m) { m.vx = m.vy = 0; }
+  shotOver(i);
+  let next = 1 - i;
+  if (pl.extra) { pl.extra = false; next = i; toast(`<b>${pname(i)}</b> shoots again`, PC[i]); }
+  for (let k = 0; k < 2; k++) game.m[k].glide = guardSpot(k);
+  game.sl.next = next; game.sl.t = 0;
+  game.phase = 'return';
+}
+function collect(u) {
+  const i = game.sl.shooter, pl = game.players[i], info = PU[u.type];
+  if (u.type === 'turbo') pl.turbo = true;
+  else if (u.type === 'giant') { pl.giant = 3; game.m[i].r = MR * SLING.giant; }
+  else if (u.type === 'shield') game.shields[i] = true;
+  else if (u.type === 'double') pl.double = true;
+  else if (u.type === 'extra') pl.extra = true;
+  else if (u.type === 'ghost') pl.ghost = true;
+  sfx.pu();
+  sparks(u.x, u.y, 22, PUC[u.type], 1.1);
+  floatText(u.x, u.y, info.name.toUpperCase(), PUC[u.type]);
+  toast(`<b>${pname(i)}: ${info.name}</b> ${info.desc}`, PUC[u.type]);
+}
+
+// CPU shot planning: try many placements and launches in a copy of the table, keep the best.
+function genCandidates(i) {
+  const p = game.puck, r = game.m[i].r, oppY = i === 0 ? 0 : L;
+  const targets = [];
+  for (const gx of [W / 2, W / 2 - GOAL_W * 0.3, W / 2 + GOAL_W * 0.3]) targets.push([gx, oppY], [-gx, oppY], [2 * W - gx, oppY]);
+  for (const u of game.pus) targets.push([u.x, u.y]);
+  targets.push([0.12, i === 0 ? 0.35 : L - 0.35], [W - 0.12, i === 0 ? 0.35 : L - 0.35]);
+  const out = [];
+  for (const [tx, ty] of targets) {
+    let dx = tx - p.x, dy = ty - p.y;
+    const d = Math.hypot(dx, dy);
+    if (d < 1e-6) continue;
+    dx /= d; dy /= d;
+    const cx = p.x - dx * (PR + r), cy = p.y - dy * (PR + r);
+    for (const back of [0.05, 0.16, 0.3]) {
+      const [sx, sy] = placeClamp(i, cx - dx * back, cy - dy * back, r);
+      let lx = cx - sx, ly = cy - sy;
+      const ld = Math.hypot(lx, ly);
+      if (ld < 1e-4) { lx = dx; ly = dy; } else { lx /= ld; ly /= ld; }
+      for (const pow of [0.45, 0.65, 0.85, 1]) out.push({ x: sx, y: sy, dx: lx, dy: ly, pow });
+    }
+  }
+  for (let k = 0; k < 30; k++) {
+    const [sx, sy] = placeClamp(i, r + Math.random() * (W - 2 * r), i === 0 ? HALF + r + Math.random() * (HALF - 2 * r) : r + Math.random() * (HALF - 2 * r), r);
+    const a = Math.atan2(p.y - sy, p.x - sx) + (Math.random() * 2 - 1) * 0.3;
+    out.push({ x: sx, y: sy, dx: Math.cos(a), dy: Math.sin(a), pow: 0.4 + Math.random() * 0.6 });
+  }
+  return out;
+}
+function simulateShot(i, c) {
+  const pl = game.players[i];
+  const w = {
+    puck: { x: game.puck.x, y: game.puck.y, vx: 0, vy: 0, r: PR, live: true },
+    m: game.m.map(m => ({ x: m.x, y: m.y, vx: 0, vy: 0, r: m.r })),
+    pus: game.pus.map(u => ({ x: u.x, y: u.y, type: u.type })),
+    shields: game.shields.slice(), active: i, ghost: pl.ghost,
+  };
+  const a = w.m[i], o = w.m[1 - i];
+  const g = guardSpot(1 - i);
+  o.x = g.x; o.y = g.y;
+  a.x = c.x; a.y = c.y;
+  const sp = c.pow * SLING.maxLaunch * (pl.turbo ? SLING.turbo : 1);
+  a.vx = c.dx * sp; a.vy = c.dy * sp;
+  const res = { goal: -1, value: 0, touched: false };
+  const ev = {
+    hit(x, y, s, who) { if (who === i) res.touched = true; },
+    wall() {}, shield() {},
+    goal(s) { res.goal = s; },
+    pu(u) { res.value += PU_VALUE[u.type]; },
+  };
+  for (let t = 0; t < 7; t += DT) {
+    if (stepSling(w, DT, ev)) break;
+    const q = w.puck;
+    if (Math.abs(q.vx) + Math.abs(q.vy) < 0.01 && Math.abs(a.vx) + Math.abs(a.vy) < 0.01) break;
+  }
+  let s = res.value;
+  if (res.goal === i) s += 100 * (pl.double ? 2 : 1);
+  else if (res.goal === 1 - i) s -= 250;
+  else {
+    const ownY = i === 0 ? L : 0, oppY = L - ownY, q = w.puck;
+    s -= 45 * Math.max(0, 1 - Math.hypot(q.x - W / 2, q.y - ownY) / 0.9);
+    s += 12 * Math.max(0, 1 - Math.hypot(q.x - W / 2, q.y - oppY) / L);
+  }
+  if (!res.touched) s -= 30;
+  return s;
+}
+function startPlan(i) {
+  const P = AIS[game.ai[i].diff];
+  game.plan = { i, cands: shuffle(genCandidates(i)).slice(0, P.n), k: 0, best: null, bestS: -Infinity };
+}
+function stepPlan() {
+  const pl = game.plan, P = AIS[game.ai[pl.i].diff], t0 = performance.now();
+  while (pl.k < pl.cands.length && performance.now() - t0 < 6) {
+    const c = pl.cands[pl.k++], s = simulateShot(pl.i, c) + Math.random() * P.jitter;
+    if (s > pl.bestS) { pl.bestS = s; pl.best = c; }
+  }
+  return pl.k >= pl.cands.length;
+}
+
+function updateSling(dt) {
+  const sl = game.sl;
+  sl.t += dt;
+  for (const m of game.m) {
+    if (!m.glide) continue;
+    const k = Math.min(1, dt * 10);
+    m.x += (m.glide.x - m.x) * k; m.y += (m.glide.y - m.y) * k;
+    if (Math.hypot(m.glide.x - m.x, m.glide.y - m.y) < 0.002) { m.x = m.glide.x; m.y = m.glide.y; m.glide = null; }
+  }
+  const m = game.m[sl.turn];
+  switch (game.phase) {
+    case 'aim':
+      if (m.place) {
+        const k = Math.min(1, dt * 22);
+        m.x += (m.place.x - m.x) * k; m.y += (m.place.y - m.y) * k;
+      }
+      break;
+    case 'think':
+      if (stepPlan() && sl.t > 0.6) {
+        const b = game.plan.best || { x: m.x, y: m.y, dx: 0, dy: sl.turn === 0 ? -1 : 1, pow: 0.8 };
+        const P = AIS[game.ai[sl.turn].diff];
+        const ang = Math.atan2(b.dy, b.dx) + gauss() * P.ang;
+        sl.cpu = { dx: Math.cos(ang), dy: Math.sin(ang), pow: clamp(b.pow * (1 + gauss() * P.pow), 0.2, 1) };
+        m.glide = { x: b.x, y: b.y };
+        game.phase = 'cpuMove'; sl.t = 0;
+      }
+      break;
+    case 'cpuMove':
+      if (!m.glide || sl.t > 1) {
+        if (m.glide) { m.x = m.glide.x; m.y = m.glide.y; m.glide = null; }
+        game.phase = 'cpuAim'; sl.t = 0;
+      }
+      break;
+    case 'cpuAim': {
+      const c = sl.cpu, k = Math.min(1, sl.t / 0.5), e = 1 - (1 - k) * (1 - k);
+      sl.pull = { x: -c.dx * c.pow * MAX_PULL * e, y: -c.dy * c.pow * MAX_PULL * e };
+      if (sl.t > 0.62) launch(sl.turn, c.dx, c.dy, c.pow);
+      break;
+    }
+    case 'moving': {
+      acc += dt;
+      while (acc >= DT && game.phase === 'moving') {
+        acc -= DT;
+        stepSling(game, DT, liveEv);
+        if (game.phase !== 'moving') break;
+        const p = game.puck, a = game.m[game.active];
+        if (Math.hypot(p.vx, p.vy) < 0.015 && Math.hypot(a.vx, a.vy) < 0.015) sl.rest += DT; else sl.rest = 0;
+        if (sl.rest > 0.25 || sl.t > 10) endShot();
+      }
+      break;
+    }
+    case 'return':
+      if ((!game.m[0].glide && !game.m[1].glide) || sl.t > 0.9) {
+        for (const mm of game.m) if (mm.glide) { mm.x = mm.glide.x; mm.y = mm.glide.y; mm.glide = null; }
+        beginTurn(sl.next);
+      }
+      break;
+    case 'goal':
+      game.timer -= dt;
+      if (game.timer <= 0) afterGoal();
+      break;
+  }
+  if (game.phase !== 'moving') acc = 0;
+}
+
+function slDown(id, c) {
+  if (game.phase !== 'aim' || game.sl.drag) return false;
+  const i = game.sl.turn;
+  if (!isHuman(i)) return false;
+  const m = game.m[i];
+  const ax = m.place ? m.place.x : m.x, ay = m.place ? m.place.y : m.y;
+  if (Math.hypot(c.x - ax, c.y - ay) < m.r + 0.06) {
+    if (m.place) { m.x = m.place.x; m.y = m.place.y; m.place = null; }
+    game.sl.drag = { id, kind: 'aim' };
+    game.sl.pull = { x: 0, y: 0 };
+  } else if (i === 0 ? c.y > HALF - 0.02 : c.y < HALF + 0.02) {
+    game.sl.drag = { id, kind: 'move' };
+    setPlace(i, c);
+  } else return false;
+  m.glide = null;
+  game.sl.touched = true;
+  return true;
+}
+function setPlace(i, c) {
+  const m = game.m[i], [x, y] = placeClamp(i, c.x, c.y, m.r);
+  m.place = { x, y };
+}
+function slMove(id, c) {
+  const dr = game.sl.drag;
+  if (!dr || dr.id !== id || game.phase !== 'aim') return;
+  const i = game.sl.turn, m = game.m[i];
+  if (dr.kind === 'move') { setPlace(i, c); return; }
+  let px = c.x - m.x, py = c.y - m.y;
+  const d = Math.hypot(px, py);
+  if (d > MAX_PULL) { px *= MAX_PULL / d; py *= MAX_PULL / d; }
+  game.sl.pull = { x: px, y: py };
+}
+function slUp(id, cancel) {
+  const dr = game.sl.drag;
+  if (!dr || dr.id !== id) return;
+  game.sl.drag = null;
+  if (dr.kind !== 'aim' || game.phase !== 'aim') return;
+  const pl = game.sl.pull;
+  game.sl.pull = null;
+  if (cancel || !pl) return;
+  const d = Math.hypot(pl.x, pl.y), pow = d / MAX_PULL;
+  if (pow >= 0.1) launch(game.sl.turn, -pl.x / d, -pl.y / d, pow);
+}
+
+// ---------- goals, start, end ----------
+function onGoal(scorer) {
+  const conceder = 1 - scorer, p = game.puck;
+  let pts = 1;
+  if (game.mode === 'sling') {
+    if (game.players[scorer].double) { pts = 2; game.players[scorer].double = false; }
+    shotOver(game.sl.shooter);
+    for (const m of game.m) { m.vx = m.vy = 0; }
+  }
+  game.scores[scorer] += pts;
+  const gy = conceder === 0 ? L : 0;
+  sparks(W / 2, gy, reduced ? 12 : 46, PC[scorer], 2.2);
+  sparks(W / 2, gy, reduced ? 4 : 16, C.puck, 1.6);
+  fx.goal = { y: gy, t: 0, color: PC[scorer] };
+  p.live = false; p.vx = p.vy = 0;
+  trail.length = 0;
+  fx.shake = 1; fx.flash = 1; fx.flashColor = PC[scorer];
+  sfx.goal(); buzz(40);
+  banner(pts === 2 ? 'DOUBLE!' : 'GOAL!', PC[scorer]);
+  game.nextConceder = conceder;
+  game.phase = 'goal'; game.timer = game.attract ? 0.9 : 1.6;
+}
+function afterGoal() {
+  const top = game.scores[0] >= game.target ? 0 : game.scores[1] >= game.target ? 1 : -1;
+  if (top >= 0) {
+    if (!game.attract) { gameOver(top); return; }
+    game.scores = [0, 0];
+  }
+  const c = game.nextConceder, p = game.puck;
+  p.x = W / 2; p.y = c === 0 ? HALF + 0.3 : HALF - 0.3; p.vx = p.vy = 0;
+  p.live = true; p.spawnT = 0.35;
+  if (game.mode === 'classic') {
+    const m = game.m[c], dx = m.x - p.x, dy = m.y - p.y, d = Math.hypot(dx, dy), need = m.r + PR + 0.02;
+    if (d < need) [m.x, m.y] = clampHalf(c, m.x, p.y + (c === 0 ? need : -need), m.r);
+    game.phase = 'live';
+  } else {
+    for (let k = 0; k < 2; k++) game.m[k].glide = guardSpot(k);
+    beginTurn(c);
+  }
+}
+function startGame(mode, attract = false) {
+  game.mode = mode; game.attract = attract;
+  game.twoP = !attract && settings.opponent === '2p';
+  game.diff = settings.opponent === '2p' ? 'medium' : settings.opponent;
+  game.target = attract ? 7 : Number(settings.target);
+  game.scores = [0, 0]; game.time = 0; game.launches = 0;
+  game.players = [newEffects(), newEffects()];
+  game.pus = []; game.shields = [false, false]; game.active = -1; game.ghost = false; game.turboShot = false;
+  game.ai = [0, 1].map(() => ({ t: 0, mode: '', attackT: 0, diff: attract ? (Math.random() < 0.5 ? 'medium' : 'hard') : game.diff }));
+  game.kb = [{ v: 0 }, { v: 0 }];
+  game.hint = { done: attract };
+  for (let i = 0; i < 2; i++) {
+    const m = game.m[i];
+    m.r = MR; m.x = W / 2; m.y = mode === 'sling' ? (i === 0 ? L - GUARD_OFF : GUARD_OFF) : (i === 0 ? L - 0.2 : 0.2);
+    m.vx = m.vy = 0; m.tx = m.x; m.ty = m.y; m.glide = null; m.place = null; m.maxV = CLASSIC.humanSpeed;
+  }
+  const p = game.puck;
+  p.x = W / 2; p.y = HALF; p.vx = p.vy = 0; p.live = false; p.spawnT = 0;
+  fx.parts.length = 0; fx.floats.length = 0; fx.goal = null; fx.flash = 0; fx.shake = 0;
+  trail.length = 0; acc = 0; ptrs.clear();
+  game.sl.drag = null; game.sl.pull = null;
+  if (mode === 'classic') {
+    game.phase = 'ready'; game.timer = attract ? 0.3 : 1.1;
+    banner('READY', C.ink, 900);
+  } else {
+    p.live = true; p.spawnT = 0.35;
+    spawnPowerup(); spawnPowerup();
+    beginTurn(0);
+  }
+  if (!attract) {
+    game.state = 'playing';
+    $('#menu').hidden = true; $('#over').hidden = true; $('#pause').hidden = true;
+    $('#pauseBtn').hidden = false;
+    canvas.style.cursor = mode === 'classic' ? 'none' : 'default';
+    requestWake();
+  } else {
+    game.state = 'menu';
+    canvas.style.cursor = 'default';
+  }
+}
+function gameOver(winner) {
+  game.state = 'over';
+  $('#pauseBtn').hidden = true;
+  canvas.style.cursor = 'default';
+  const title = $('#over-title');
+  title.textContent = game.twoP ? `${pname(winner)} wins!` : winner === 0 ? 'You win!' : 'CPU wins';
+  title.style.setProperty('--c', PC[winner]);
+  $('#over-score').innerHTML = `<span class="r">${game.scores[0]}</span> – <span class="b">${game.scores[1]}</span>`;
+  $('#over').hidden = false;
+  sfx.win();
+  for (let k = 0; k < (reduced ? 2 : 6); k++) sparks(0.15 + Math.random() * 0.7, HALF + (Math.random() - 0.5) * 1.2, 20, [PC[winner], C.puck, C.ice][k % 3], 1.8);
+  $('#btn-rematch').focus({ preventScroll: true });
+}
+function toMenu() {
+  $('#pause').hidden = true; $('#over').hidden = true; $('#pauseBtn').hidden = true;
+  $('#menu').hidden = false;
+  releaseWake();
+  startGame('classic', true);
+}
+function pause() {
+  if (game.state !== 'playing') return;
+  game.state = 'paused';
+  if (game.mode === 'sling') { game.sl.drag = null; game.sl.pull = null; }
+  ptrs.clear();
+  $('#pause').hidden = false; $('#pauseBtn').hidden = true;
+  canvas.style.cursor = 'default';
+  $('#btn-resume').focus({ preventScroll: true });
+}
+function resume() {
+  if (game.state !== 'paused') return;
+  game.state = 'playing';
+  $('#pause').hidden = true; $('#pauseBtn').hidden = false;
+  canvas.style.cursor = game.mode === 'classic' ? 'none' : 'default';
+}
+let wakeLock = null;
+async function requestWake() {
+  try { if (navigator.wakeLock && !wakeLock) { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => { wakeLock = null; }); } } catch (e) { wakeLock = null; }
+}
+function releaseWake() { try { if (wakeLock) wakeLock.release(); } catch (e) { /* already released */ } wakeLock = null; }
+
+// ---------- effects ----------
+const fx = { parts: [], floats: [], shake: 0, flash: 0, flashColor: '', goal: null };
+const trail = [];
+function sparks(x, y, n, color, speed = 1) {
+  n = Math.round(reduced ? n / 3 : n);
+  for (let k = 0; k < n; k++) {
+    const a = Math.random() * Math.PI * 2, s = (0.3 + Math.random()) * speed;
+    fx.parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 0.35 + Math.random() * 0.45, max: 0.8, color, size: 0.006 + Math.random() * 0.008 });
+  }
+  if (fx.parts.length > 500) fx.parts.splice(0, fx.parts.length - 500);
+}
+function floatText(x, y, text, color) { fx.floats.push({ x, y, text, color, life: 1.1 }); }
+let bannerTimer = 0, toastTimer = 0;
+function banner(text, color, ms = 1100) {
+  if (game.attract) return;
+  const b = $('#banner');
+  b.textContent = text; b.style.setProperty('--c', color);
+  b.classList.remove('show'); void b.offsetWidth; b.classList.add('show');
+  clearTimeout(bannerTimer); bannerTimer = setTimeout(() => b.classList.remove('show'), ms);
+}
+function toast(html, color) {
+  if (game.attract) return;
+  const t = $('#toast');
+  t.innerHTML = html; t.style.setProperty('--c', color);
+  t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+}
+function updateFx(dt) {
+  for (const q of fx.parts) { q.x += q.vx * dt; q.y += q.vy * dt; q.vx *= 1 - 3 * dt; q.vy *= 1 - 3 * dt; q.life -= dt; }
+  fx.parts = fx.parts.filter(q => q.life > 0);
+  for (const f of fx.floats) f.life -= dt;
+  fx.floats = fx.floats.filter(f => f.life > 0);
+  fx.shake = Math.max(0, fx.shake - dt * 2.5);
+  fx.flash = Math.max(0, fx.flash - dt * 2.2);
+  if (fx.goal) { fx.goal.t += dt; if (fx.goal.t > 0.8) fx.goal = null; }
+  const p = game.puck;
+  if (p.spawnT > 0) p.spawnT = Math.max(0, p.spawnT - dt);
+}
+
+// ---------- update ----------
+let acc = 0;
+function updateClassic(dt) {
+  for (let i = 0; i < 2; i++) { if (isHuman(i)) keyboardSteer(i, dt); else aiClassic(i, dt); }
+  if (game.phase === 'ready') {
+    game.timer -= dt;
+    if (game.timer <= 0) { game.puck.live = true; game.puck.spawnT = 0.3; game.phase = 'live'; banner('GO!', C.puck, 700); }
+  } else if (game.phase === 'goal') {
+    game.timer -= dt;
+    if (game.timer <= 0) afterGoal();
+  }
+  acc += dt;
+  while (acc >= DT) { acc -= DT; stepClassic(DT); }
+}
+function update(dt) {
+  game.time += dt;
+  if (game.mode === 'classic') updateClassic(dt); else updateSling(dt);
+  const p = game.puck;
+  if (p.live && Math.hypot(p.vx, p.vy) > 0.6) { trail.push({ x: p.x, y: p.y }); if (trail.length > 12) trail.shift(); }
+  else if (trail.length) trail.shift();
+  if (game.turboShot && game.active >= 0 && !reduced) {
+    const a = game.m[game.active];
+    if (Math.hypot(a.vx, a.vy) > 0.5) fx.parts.push({ x: a.x, y: a.y, vx: -a.vx * 0.2, vy: -a.vy * 0.2, life: 0.35, max: 0.35, color: C['pu-turbo'], size: a.r * 0.35 });
+  }
+}
+
+// ---------- drawing ----------
+function circle(x, y, r) { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); }
+// Where a mallet is drawn while its slingshot is pulled: a shortened pull, kept on the table.
+function pulledPos(m, pull) {
+  return [clamp(m.x + pull.x * 0.65, 0, W), clamp(m.y + pull.y * 0.65, 0, L)];
+}
+function drawMallet(i, alpha) {
+  const m = game.m[i], r = m.r, Lt = view.light, Sh = view.shadow;
+  let x = m.x, y = m.y;
+  const sl = game.sl;
+  if (game.mode === 'sling' && sl.pull && sl.turn === i) [x, y] = pulledPos(m, sl.pull);
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = C.shadow; circle(x + Sh.x * r / MR, y + Sh.y * r / MR, r * 1.02); ctx.fill();
+  ctx.fillStyle = PD[i]; circle(x, y, r); ctx.fill();
+  const g = ctx.createRadialGradient(x + Lt.x * r * 0.4, y + Lt.y * r * 0.4, r * 0.1, x, y, r);
+  g.addColorStop(0, PS[i]); g.addColorStop(0.55, PC[i]); g.addColorStop(1, PD[i]);
+  ctx.fillStyle = g; circle(x, y, r * 0.9); ctx.fill();
+  ctx.fillStyle = PD[i]; circle(x - Lt.x * r * 0.07, y - Lt.y * r * 0.07, r * 0.5); ctx.fill();
+  const g2 = ctx.createRadialGradient(x + Lt.x * r * 0.18, y + Lt.y * r * 0.18, 0, x, y, r * 0.46);
+  g2.addColorStop(0, PS[i]); g2.addColorStop(1, PC[i]);
+  ctx.fillStyle = g2; circle(x, y, r * 0.44); ctx.fill();
+  ctx.fillStyle = C.spec; circle(x + Lt.x * r * 0.2, y + Lt.y * r * 0.2, r * 0.1); ctx.fill();
+  ctx.globalAlpha = 1;
+}
+function drawPuck() {
+  const p = game.puck;
+  if (!p.live && game.phase !== 'ready') return;
+  const k = p.spawnT > 0 ? 1 - p.spawnT / 0.35 : 1;
+  const r = PR * (k < 1 ? Math.min(1.15, k * 1.3) : 1);
+  const Sh = view.shadow, Lt = view.light;
+  ctx.globalAlpha = p.live ? 1 : 0.45;
+  for (let n = 0; n < trail.length; n++) {
+    const q = trail[n];
+    ctx.globalAlpha = (n / trail.length) * 0.22;
+    ctx.fillStyle = C.puck; circle(q.x, q.y, r * (0.4 + 0.5 * n / trail.length)); ctx.fill();
+  }
+  ctx.globalAlpha = p.live ? 1 : 0.45;
+  ctx.fillStyle = C.shadow; circle(p.x + Sh.x * 0.7, p.y + Sh.y * 0.7, r); ctx.fill();
+  ctx.fillStyle = C['puck-body']; circle(p.x, p.y, r); ctx.fill();
+  ctx.strokeStyle = C.puck; ctx.lineWidth = r * 0.2; circle(p.x, p.y, r * 0.66); ctx.stroke();
+  ctx.fillStyle = C.spec; circle(p.x + Lt.x * r * 0.45, p.y + Lt.y * r * 0.45, r * 0.12); ctx.fill();
+  ctx.globalAlpha = 1;
+}
+function glyph(type, x, y, s, color, bg) {
+  ctx.save(); ctx.translate(x, y);
+  ctx.fillStyle = color; ctx.strokeStyle = color;
+  if (type === 'double') {
+    ctx.font = `${Math.round(s * 1.15)}px ${FONT_D}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('×2', 0, s * 0.08);
+    ctx.restore(); return;
+  }
+  ctx.scale(s, s);
+  ctx.beginPath();
+  if (type === 'turbo') {
+    ctx.moveTo(0.18, -0.95); ctx.lineTo(-0.5, 0.12); ctx.lineTo(-0.05, 0.12); ctx.lineTo(-0.2, 0.95); ctx.lineTo(0.5, -0.18); ctx.lineTo(0.05, -0.18); ctx.closePath(); ctx.fill();
+  } else if (type === 'giant') {
+    ctx.arc(0, 0, 0.28, 0, Math.PI * 2); ctx.fill();
+    for (let k = 0; k < 4; k++) {
+      const a = Math.PI / 4 + k * Math.PI / 2, c = Math.cos(a), sn = Math.sin(a);
+      ctx.beginPath(); ctx.moveTo(c * 0.98, sn * 0.98);
+      ctx.lineTo(c * 0.52 - sn * 0.24, sn * 0.52 + c * 0.24); ctx.lineTo(c * 0.52 + sn * 0.24, sn * 0.52 - c * 0.24);
+      ctx.closePath(); ctx.fill();
+    }
+  } else if (type === 'shield') {
+    ctx.moveTo(0, -0.85); ctx.lineTo(0.68, -0.58); ctx.lineTo(0.62, 0.1);
+    ctx.quadraticCurveTo(0.52, 0.62, 0, 0.9); ctx.quadraticCurveTo(-0.52, 0.62, -0.62, 0.1);
+    ctx.lineTo(-0.68, -0.58); ctx.closePath(); ctx.fill();
+  } else if (type === 'extra') {
+    const a0 = -Math.PI * 0.2, a1 = Math.PI * 1.25, R = 0.55;
+    ctx.lineWidth = 0.22; ctx.arc(0, 0, R, a0, a1); ctx.stroke();
+    const ex = Math.cos(a1) * R, ey = Math.sin(a1) * R, tx = -Math.sin(a1), ty = Math.cos(a1);
+    ctx.beginPath(); ctx.moveTo(ex + tx * 0.34, ey + ty * 0.34);
+    ctx.lineTo(ex - ty * 0.3, ey + tx * 0.3); ctx.lineTo(ex + ty * 0.3, ey - tx * 0.3); ctx.closePath(); ctx.fill();
+  } else if (type === 'ghost') {
+    ctx.moveTo(-0.62, 0.85); ctx.lineTo(-0.62, -0.1); ctx.arc(0, -0.1, 0.62, Math.PI, 0); ctx.lineTo(0.62, 0.85);
+    ctx.lineTo(0.31, 0.6); ctx.lineTo(0, 0.85); ctx.lineTo(-0.31, 0.6); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = bg; circle(-0.22, -0.12, 0.13); ctx.fill(); circle(0.22, -0.12, 0.13); ctx.fill();
+  }
+  ctx.restore();
+}
+function drawPowerups(ox, oy, t) {
+  for (const u of game.pus) {
+    let [x, y] = toScreen(u.x, u.y); x += ox; y += oy;
+    const R = PU_R * view.s, col = PUC[u.type];
+    const age = Math.min(1, (game.time - u.born) / 0.4), pulse = 1 + Math.sin(t * 3 + u.seed) * 0.05;
+    const blink = u.ttl <= 1 ? 0.45 + 0.55 * Math.abs(Math.sin(t * 6)) : 1;
+    ctx.globalAlpha = (0.3 + 0.2 * Math.sin(t * 4 + u.seed)) * blink * age;
+    ctx.strokeStyle = col; ctx.lineWidth = Math.max(1.5, R * 0.12);
+    circle(x, y, R * 1.35 * pulse); ctx.stroke();
+    ctx.globalAlpha = blink * age;
+    ctx.fillStyle = C.shadow; circle(x + 2, y + 3, R * pulse); ctx.fill();
+    const g = ctx.createRadialGradient(x - R * 0.3, y - R * 0.3, R * 0.1, x, y, R);
+    g.addColorStop(0, C.ice); g.addColorStop(0.35, col); g.addColorStop(1, col);
+    ctx.fillStyle = g; circle(x, y, R * pulse); ctx.fill();
+    glyph(u.type, x, y, R * 0.58, C['pu-ink'], col);
+    ctx.globalAlpha = 1;
+  }
+}
+function drawAim(i) {
+  const sl = game.sl, pl = sl.pull;
+  if (!pl || sl.turn !== i) return;
+  const m = game.m[i], d = Math.hypot(pl.x, pl.y);
+  if (d < 0.005) return;
+  const pow = Math.min(1, d / MAX_PULL), ux = -pl.x / d, uy = -pl.y / d, px = -uy, py = ux;
+  const [bx, by] = pulledPos(m, pl), peg = m.r + 0.03;
+  // slingshot bands from two pegs to the pulled-back mallet
+  ctx.strokeStyle = PD[i]; ctx.lineWidth = 0.009; ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(m.x + px * peg, m.y + py * peg); ctx.lineTo(bx - ux * m.r * 0.6, by - uy * m.r * 0.6);
+  ctx.lineTo(m.x - px * peg, m.y - py * peg); ctx.stroke();
+  ctx.fillStyle = C['puck-body'];
+  circle(m.x + px * peg, m.y + py * peg, 0.012); ctx.fill(); circle(m.x - px * peg, m.y - py * peg, 0.012); ctx.fill();
+  // aim dots ahead of the anchor
+  const turbo = game.players[i].turbo, len = 0.12 + pow * 0.45;
+  const col = turbo ? C['pu-turbo'] : `hsl(${Math.round(130 - 130 * pow)} 85% 48%)`;
+  ctx.fillStyle = col;
+  for (let s = m.r + 0.03; s < m.r + len; s += 0.035) {
+    ctx.globalAlpha = 1 - (s - m.r) / (len + 0.05) * 0.6;
+    circle(m.x + ux * s, m.y + uy * s, 0.008); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  const hx = m.x + ux * (m.r + len), hy = m.y + uy * (m.r + len);
+  ctx.beginPath(); ctx.moveTo(hx + ux * 0.04, hy + uy * 0.04);
+  ctx.lineTo(hx + px * 0.025, hy + py * 0.025); ctx.lineTo(hx - px * 0.025, hy - py * 0.025); ctx.closePath(); ctx.fill();
+  // power ring around the anchor
+  ctx.strokeStyle = col; ctx.lineWidth = 0.012;
+  ctx.beginPath(); ctx.arc(m.x, m.y, m.r + 0.022, -Math.PI / 2, -Math.PI / 2 + pow * Math.PI * 2); ctx.stroke();
+}
+function drawTableLayer(t) {
+  const sl = game.sl;
+  if (game.mode === 'sling' && game.phase === 'aim' && isHuman(sl.turn) && game.state === 'playing') {
+    // tint the half the player can place their mallet in
+    ctx.globalAlpha = 0.06 + 0.03 * Math.sin(t * 3);
+    ctx.fillStyle = PC[sl.turn];
+    ctx.fillRect(0, sl.turn === 0 ? HALF : 0, W, HALF);
+    ctx.globalAlpha = 1;
+  }
+  for (let o = 0; o < 2; o++) {
+    if (!game.shields[o]) continue;
+    const y = o === 0 ? L : 0;
+    ctx.globalAlpha = 0.55 + 0.25 * Math.sin(t * 5);
+    ctx.fillStyle = C['pu-shield'];
+    ctx.fillRect(GX0 - 0.01, y - 0.011, GOAL_W + 0.02, 0.022);
+    ctx.globalAlpha = 0.18;
+    ctx.fillRect(GX0 - 0.01, o === 0 ? y - 0.05 : y, GOAL_W + 0.02, 0.05);
+    ctx.globalAlpha = 1;
+  }
+  if (fx.goal) {
+    const k = fx.goal.t / 0.8, R = 0.1 + k * 0.5;
+    const g = ctx.createRadialGradient(W / 2, fx.goal.y, 0, W / 2, fx.goal.y, R);
+    g.addColorStop(0, fx.goal.color); g.addColorStop(1, C['gloss-0']);
+    ctx.globalAlpha = (1 - k) * 0.6; ctx.fillStyle = g;
+    ctx.fillRect(W / 2 - R, fx.goal.y - R, 2 * R, 2 * R);
+    ctx.globalAlpha = 1;
+  }
+}
+function drawParts() {
+  for (const q of fx.parts) {
+    ctx.globalAlpha = Math.max(0, Math.min(1, q.life / q.max * 1.4));
+    ctx.fillStyle = q.color; circle(q.x, q.y, q.size * (0.4 + q.life / q.max)); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+const flipFor = i => i === 1 && game.twoP && !view.horiz;
+function drawScores(ox, oy) {
+  ctx.font = `${Math.round(0.13 * view.s)}px ${FONT_D}`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (const i of [0, 1]) {
+    const [x, y] = toScreen(W - 0.12, i === 0 ? HALF + 0.12 : HALF - 0.12);
+    ctx.save(); ctx.translate(x + ox, y + oy);
+    if (flipFor(i)) ctx.rotate(Math.PI);
+    ctx.globalAlpha = 0.32; ctx.fillStyle = PC[i];
+    ctx.fillText(String(game.scores[i]), 0, 0);
+    ctx.restore();
+  }
+  ctx.globalAlpha = 1;
+}
+function chipsFor(i) {
+  const pl = game.players[i], out = [];
+  if (pl.turbo) out.push('turbo');
+  if (pl.giant > 0) out.push('giant');
+  if (game.shields[i]) out.push('shield');
+  if (pl.double) out.push('double');
+  if (pl.extra) out.push('extra');
+  if (pl.ghost) out.push('ghost');
+  return out;
+}
+// Player label and power-up chips sit just past each end of the table, facing that player.
+function drawEnds(t) {
+  if (game.attract) return;
+  for (const i of [0, 1]) {
+    const [x, y] = toScreen(W / 2, i === 0 ? L + RAIL : -RAIL);
+    let rot, out = 1;
+    if (view.horiz) rot = i === 0 ? Math.PI / 2 : -Math.PI / 2;
+    else if (i === 0) rot = 0;
+    else if (game.twoP) rot = Math.PI;
+    else { rot = 0; out = -1; }
+    ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+    const turn = game.mode === 'sling' && game.sl.turn === i && ['aim', 'think', 'cpuMove', 'cpuAim'].includes(game.phase) && game.state === 'playing';
+    let text = pname(i).toUpperCase();
+    if (turn) text = isHuman(i) && !game.twoP ? 'YOUR SHOT' : `${text}'S SHOT`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = `${turn ? 15 : 12}px ${FONT_D}`;
+    ctx.fillStyle = turn ? PC[i] : C.muted;
+    ctx.globalAlpha = turn ? 0.75 + 0.25 * Math.sin(t * 5) : 0.9;
+    ctx.fillText(text, 0, out * 15);
+    ctx.globalAlpha = 1;
+    const hint = hintFor(i);
+    if (hint) {
+      const fs = 13;
+      ctx.font = `600 ${fs}px ${FONT_U}`;
+      const w = ctx.measureText(hint).width + fs * 1.6, h = fs * 2;
+      ctx.globalAlpha = 0.85 + 0.15 * Math.sin(t * 3);
+      ctx.fillStyle = C.ink; rr(ctx, -w / 2, out * 40 - h / 2, w, h, h / 2); ctx.fill();
+      ctx.fillStyle = C.night; ctx.fillText(hint, 0, out * 40 + 1);
+      ctx.globalAlpha = 1;
+    } else if (game.mode === 'sling') {
+      const chips = chipsFor(i), n = chips.length;
+      for (let k = 0; k < n; k++) {
+        const cx = (k - (n - 1) / 2) * 30, cy = out * 40;
+        ctx.fillStyle = PUC[chips[k]]; circle(cx, cy, 12); ctx.fill();
+        glyph(chips[k], cx, cy, 7.5, C['pu-ink'], PUC[chips[k]]);
+      }
+    }
+    ctx.restore();
+  }
+}
+function drawFloats(ox, oy) {
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = `${Math.max(14, Math.round(view.s * 0.045))}px ${FONT_D}`;
+  for (const f of fx.floats) {
+    const [x, y] = toScreen(f.x, f.y), k = 1 - f.life / 1.1;
+    ctx.globalAlpha = Math.min(1, f.life * 2);
+    ctx.fillStyle = C.night; ctx.fillText(f.text, x + ox + 2, y + oy - k * 34 + 2);
+    ctx.fillStyle = f.color; ctx.fillText(f.text, x + ox, y + oy - k * 34);
+  }
+  ctx.globalAlpha = 1;
+}
+// First-time help, shown in the end area of the player it is meant for.
+function hintFor(i) {
+  if (game.attract || game.state !== 'playing' || !isHuman(i)) return '';
+  if (game.mode === 'classic') {
+    if (game.hint.done || game.time > 7 || (i === 1 && !coarse)) return '';
+    if (coarse) return 'Drag in your half to move your mallet';
+    return game.twoP ? 'Mouse or WASD for red · arrows for blue' : 'Move the mouse to move your mallet';
+  }
+  if (game.sl.turn !== i || game.phase !== 'aim' || game.sl.touched || game.launches >= 3) return '';
+  return game.launches === 0 ? 'Pull back from your mallet, then let go' : 'Tap your half to move · pull back to shoot';
+}
+function render(t) {
+  ctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
+  ctx.fillStyle = view.bg; ctx.fillRect(0, 0, view.w, view.h);
+  let ox = 0, oy = 0;
+  if (fx.shake > 0 && !reduced) { const s = fx.shake * fx.shake * 10; ox = (Math.random() * 2 - 1) * s; oy = (Math.random() * 2 - 1) * s; }
+  tableTransform(ox, oy);
+  ctx.drawImage(tableCv, -RAIL, -RAIL, W + 2 * RAIL, L + 2 * RAIL);
+  ctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
+  drawScores(ox, oy);
+  tableTransform(ox, oy);
+  drawTableLayer(t);
+  ctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
+  drawPowerups(ox, oy, t);
+  tableTransform(ox, oy);
+  drawPuck();
+  const sl = game.sl;
+  for (const i of [0, 1]) {
+    let alpha = 1;
+    if (game.mode === 'sling') {
+      const shooter = game.active >= 0 ? game.active : sl.turn;
+      if (i !== shooter && (game.ghost || (game.active < 0 && game.players[shooter].ghost && game.phase !== 'return'))) alpha = 0.3;
+    }
+    drawMallet(i, alpha);
+    if (game.mode === 'sling') drawAim(i);
+  }
+  if (game.mode === 'sling' && game.phase === 'aim' && !sl.pull && isHuman(sl.turn) && game.state === 'playing') {
+    const m = game.m[sl.turn];
+    ctx.strokeStyle = PC[sl.turn]; ctx.lineWidth = 0.006; ctx.setLineDash([0.02, 0.018]); ctx.lineDashOffset = -t * 0.06;
+    circle(m.x, m.y, m.r + 0.025 + 0.006 * Math.sin(t * 5)); ctx.stroke(); ctx.setLineDash([]);
+  }
+  drawParts();
+  ctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
+  drawFloats(ox, oy);
+  drawEnds(t);
+  if (fx.flash > 0) { ctx.globalAlpha = fx.flash * 0.18; ctx.fillStyle = fx.flashColor; ctx.fillRect(0, 0, view.w, view.h); ctx.globalAlpha = 1; }
+}
+
+// ---------- input ----------
+const keys = {};
+const ptrs = new Map();
+canvas.addEventListener('pointerdown', e => {
+  ensureAudio();
+  lastPointerType = e.pointerType;
+  if (game.state !== 'playing') return;
+  const c = toTable(e.clientX, e.clientY);
+  if (game.mode === 'classic') {
+    let i = 0;
+    if (game.twoP && e.pointerType !== 'mouse') i = c.y < HALF ? 1 : 0;
+    ptrs.set(e.pointerId, i);
+    steer(i, c);
+  } else if (!slDown(e.pointerId, c)) return;
+  try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* capture unsupported */ }
+  e.preventDefault();
+});
+canvas.addEventListener('pointermove', e => {
+  if (game.state !== 'playing') return;
+  const c = toTable(e.clientX, e.clientY);
+  if (game.mode === 'classic') {
+    if (ptrs.has(e.pointerId)) steer(ptrs.get(e.pointerId), c);
+    else if (e.pointerType === 'mouse') steer(0, c);
+  } else {
+    slMove(e.pointerId, c);
+    if (e.pointerType === 'mouse') {
+      const i = game.sl.turn, m = game.m[i];
+      let cur = 'default';
+      if (game.phase === 'aim' && isHuman(i)) {
+        if (game.sl.drag && game.sl.drag.kind === 'aim') cur = 'grabbing';
+        else if (Math.hypot(c.x - m.x, c.y - m.y) < m.r + 0.06) cur = 'grab';
+        else if (i === 0 ? c.y > HALF : c.y < HALF) cur = 'pointer';
+      }
+      canvas.style.cursor = cur;
+    }
+  }
+});
+canvas.addEventListener('pointerup', e => { ptrs.delete(e.pointerId); if (game.mode === 'sling' && game.state === 'playing') slUp(e.pointerId, false); });
+canvas.addEventListener('pointercancel', e => { ptrs.delete(e.pointerId); if (game.mode === 'sling') slUp(e.pointerId, true); });
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+window.addEventListener('keydown', e => {
+  if (e.code === 'Escape' || e.code === 'KeyP') {
+    if (game.state === 'playing') pause(); else if (game.state === 'paused') resume();
+    e.preventDefault(); return;
+  }
+  if (game.state === 'playing' && /^(Arrow|Key[WASD]$)/.test(e.code)) { keys[e.code] = true; ensureAudio(); e.preventDefault(); }
+});
+window.addEventListener('keyup', e => { keys[e.code] = false; });
+window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) pause();
+  else if (game.state === 'playing') requestWake();
+});
+window.addEventListener('resize', layout);
+
+// ---------- menus ----------
+function syncSegs() {
+  document.querySelectorAll('.seg').forEach(seg => {
+    const v = settings[seg.dataset.key];
+    seg.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === v)));
+  });
+}
+document.querySelectorAll('.seg').forEach(seg => {
+  seg.addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    ensureAudio();
+    settings[seg.dataset.key] = b.dataset.v;
+    saveSettings(); syncSegs();
+    if (seg.dataset.key === 'orient') layout();
+    sfx.tick();
+  });
+});
+document.querySelectorAll('.mode').forEach(b => b.addEventListener('click', () => { ensureAudio(); startGame(b.dataset.mode); }));
+$('#pauseBtn').addEventListener('click', () => { ensureAudio(); pause(); });
+$('#btn-resume').addEventListener('click', resume);
+$('#btn-restart').addEventListener('click', () => startGame(game.mode));
+$('#btn-quit').addEventListener('click', toMenu);
+$('#btn-rematch').addEventListener('click', () => startGame(game.mode));
+$('#btn-menu').addEventListener('click', toMenu);
+
+// ---------- loop ----------
+let last = performance.now();
+function frame(now) {
+  requestAnimationFrame(frame);
+  const dt = Math.min(0.05, Math.max(0, (now - last) / 1000));
+  last = now;
+  if (game.state === 'playing' || game.state === 'menu') update(dt);
+  updateFx(game.state === 'paused' ? 0 : dt);
+  render(now / 1000);
+}
+
+function boot(data) {
+  if (data && data.settings) loadSettings(data.settings);
+  readColors();
+  syncSegs();
+  layout();
+  startGame('classic', true);
+  requestAnimationFrame(frame);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { readColors(); }).catch(() => {});
+}
+const hot = window.claude && window.claude.hot;
+if (hot && hot.snapshot) hot.snapshot(() => ({ settings: { ...settings } }));
+if (hot && hot.ready) hot.ready(boot); else boot((hot && hot.data) || {});
+})();
+</script>
